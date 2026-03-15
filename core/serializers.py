@@ -73,6 +73,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
+    # Explicitly declare as ImageField so DRF passes the uploaded file
+    # object to the CloudinaryField backend (same pattern as KycSerializer).
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model  = User
         fields = ["username", "first_name", "last_name", "bio", "avatar"]

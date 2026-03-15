@@ -1,5 +1,5 @@
 {% extends "panel/base.html" %}
-{% block title %}{{ action }} Trader — SignalSync Admin{% endblock %}
+{% block title %}{{ action }} Trader — VeltrixSync Admin{% endblock %}
 {% block heading %}{{ action }} Trader{% endblock %}
 {% block breadcrumb %}<a href="{% url 'panel:trader_list' %}" style="color:#B0D45A;">Traders</a> / {% if obj %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / {% endif %}{{ action }}{% endblock %}
 

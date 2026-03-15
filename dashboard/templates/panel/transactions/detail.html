@@ -1,6 +1,6 @@
 {% extends "panel/base.html" %}
 {% load humanize %}
-{% block title %}Transaction {{ obj.tx_id }} — SignalSync Admin{% endblock %}
+{% block title %}Transaction {{ obj.tx_id }} — VeltrixSync Admin{% endblock %}
 {% block heading %}Transaction Detail{% endblock %}
 {% block breadcrumb %}<a href="{% url 'panel:transaction_list' %}" style="color:#B0D45A;">Transactions</a> / {{ obj.tx_id|truncatechars:16 }}…{% endblock %}
 
@@ -20,7 +20,7 @@
           {% elif obj.status == "pending"  %}<span class="badge badge-yellow">Pending</span>
           {% else %}<span class="badge badge-red">Rejected</span>{% endif %}
         </div>
-        <p class="text-3xl font-bold mt-2" style="color:#f0f0f0;">${{ obj.amount_usd|floatformat:2|intcomma }}</p>
+        <p class="text-xl font-bold mt-2 truncate" title="${{ obj.amount_usd|floatformat:2|intcomma }}" style="color:#f0f0f0;">${{ obj.amount_usd|floatformat:2|intcomma }}</p>
         <p class="text-sm mt-1" style="color:#8fa896;">{{ obj.units }} {{ obj.asset }}</p>
       </div>
       <p class="text-xs text-right" style="color:#8fa896;">{{ obj.created_at|date:"F d, Y H:i" }}</p>

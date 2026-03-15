@@ -1,6 +1,6 @@
 {% extends "panel/base.html" %}
 {% load humanize %}
-{% block title %}Dashboard — SignalSync Admin{% endblock %}
+{% block title %}Dashboard — VeltrixSync Admin{% endblock %}
 {% block heading %}Dashboard{% endblock %}
 {% block breadcrumb %}Overview of platform activity{% endblock %}
 
@@ -9,51 +9,51 @@
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
   <div class="stat-card">
     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Total Users</p>
-    <p class="text-3xl font-bold" style="color:#f0f0f0;">{{ total_users }}</p>
+    <p class="text-xl font-bold truncate" style="color:#f0f0f0;">{{ total_users }}</p>
     <p class="text-xs mt-1" style="color:#B0D45A;">Registered accounts</p>
   </div>
   <div class="stat-card">
     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">KYC Pending</p>
-    <p class="text-3xl font-bold" style="color:#fbbf24;">{{ kyc_pending }}</p>
+    <p class="text-xl font-bold truncate" style="color:#fbbf24;">{{ kyc_pending }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">Awaiting review</p>
   </div>
   <div class="stat-card">
     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">KYC Approved</p>
-    <p class="text-3xl font-bold" style="color:#22c55e;">{{ kyc_approved }}</p>
+    <p class="text-xl font-bold truncate" style="color:#22c55e;">{{ kyc_approved }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">Verified users</p>
   </div>
   <div class="stat-card">
     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Traders</p>
-    <p class="text-3xl font-bold" style="color:#f0f0f0;">{{ total_traders }}</p>
+    <p class="text-xl font-bold truncate" style="color:#f0f0f0;">{{ total_traders }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">Active profiles</p>
   </div>
   <div class="stat-card">
     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Pending Tx</p>
-    <p class="text-3xl font-bold" style="color:#f87171;">{{ pending_tx }}</p>
+    <p class="text-xl font-bold truncate" style="color:#f87171;">{{ pending_tx }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">Need action</p>
   </div>
 </div>
 
 <!-- Finance Row -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-  <div class="stat-card col-span-1">
+  <div class="stat-card col-span-1" style="overflow:hidden;">
     <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Total Deposits</p>
-    <p class="text-2xl font-bold" style="color:#22c55e;">${{ completed_deposits|floatformat:2|intcomma }}</p>
+    <p class="text-base font-bold leading-tight truncate" title="${{ completed_deposits|floatformat:2|intcomma }}" style="color:#22c55e;">${{ completed_deposits|floatformat:2|intcomma }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">Completed</p>
   </div>
-  <div class="stat-card col-span-1">
+  <div class="stat-card col-span-1" style="overflow:hidden;">
     <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Total Withdrawals</p>
-    <p class="text-2xl font-bold" style="color:#f87171;">${{ completed_withdrawals|floatformat:2|intcomma }}</p>
+    <p class="text-base font-bold leading-tight truncate" title="${{ completed_withdrawals|floatformat:2|intcomma }}" style="color:#f87171;">${{ completed_withdrawals|floatformat:2|intcomma }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">Completed</p>
   </div>
-  <div class="stat-card col-span-1">
+  <div class="stat-card col-span-1" style="overflow:hidden;">
     <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Platform Balance</p>
-    <p class="text-2xl font-bold" style="color:#f0f0f0;">${{ total_balance|floatformat:2|intcomma }}</p>
+    <p class="text-base font-bold leading-tight truncate" title="${{ total_balance|floatformat:2|intcomma }}" style="color:#f0f0f0;">${{ total_balance|floatformat:2|intcomma }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">All users</p>
   </div>
-  <div class="stat-card col-span-1">
+  <div class="stat-card col-span-1" style="overflow:hidden;">
     <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Platform Profit</p>
-    <p class="text-2xl font-bold" style="color:#B0D45A;">${{ total_profit|floatformat:2|intcomma }}</p>
+    <p class="text-base font-bold leading-tight truncate" title="${{ total_profit|floatformat:2|intcomma }}" style="color:#B0D45A;">${{ total_profit|floatformat:2|intcomma }}</p>
     <p class="text-xs mt-1" style="color:#8fa896;">All users</p>
   </div>
 </div>

@@ -212,7 +212,7 @@ EMAIL_USE_SSL = True  # ✅ CORRECT for port 465
 EMAIL_USE_TLS = False  # ✅ Must be False when using SSL
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='your-email@gmail.com')  # Your Email
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='your-app-password')  # Email App Password
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='SignalSync <support@veltrixsync.com>')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='VeltrixSync <support@veltrixsync.com>')
 ADMIN_NOTIFICATION_EMAIL = config('ADMIN_NOTIFICATION_EMAIL', default='support@veltrixsync.com')
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 

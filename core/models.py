@@ -8,7 +8,7 @@ from cloudinary.models import CloudinaryField
 
 class User(AbstractUser):
     """
-    Extended user model for SignalSync.
+    Extended user model for VeltrixSync.
     Username + email are both required and unique.
     """
     email = models.EmailField(unique=True)

@@ -1,6 +1,6 @@
 """
-Email service for SignalSync
-HTML email templates styled to match the SignalSync brand.
+Email service for VeltrixSync
+HTML email templates styled to match the VeltrixSync brand.
 """
 
 import smtplib
@@ -352,7 +352,7 @@ def _footer_html(user_email: str) -> str:
     year     = timezone.now().year
     return f"""
     <div class="footer">
-        <div class="footer-brand">SignalSync</div>
+        <div class="footer-brand">VeltrixSync</div>
         <div class="footer-text">
             This is an automated message. Please do not reply directly to this email.
         </div>
@@ -362,7 +362,7 @@ def _footer_html(user_email: str) -> str:
             <a href="{frontend}/support">Support</a>
         </div>
         <div class="footer-text" style="margin-top:14px;">
-            Sent to {user_email} &middot; &copy; {year} SignalSync. All rights reserved.
+            Sent to {user_email} &middot; &copy; {year} VeltrixSync. All rights reserved.
         </div>
     </div>
     """
@@ -395,7 +395,7 @@ def send_welcome_email(user) -> bool:
     {_header_html()}
     <div class="body-content">
         <div class="greeting">Hello {name},</div>
-        <div class="heading">Welcome to SignalSync</div>
+        <div class="heading">Welcome to VeltrixSync</div>
         <div class="text">
             Your account has been successfully created. You're now part of a community of
             traders who copy the best-performing experts and grow together.
@@ -418,7 +418,7 @@ def send_welcome_email(user) -> bool:
     </div>
     {_footer_html(user.email)}
     """
-    return send_email(user.email, "Welcome to SignalSync", _wrap(body))
+    return send_email(user.email, "Welcome to VeltrixSync", _wrap(body))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -433,7 +433,7 @@ def send_verification_code_email(user, code: str) -> bool:
         <div class="greeting">Hello {name},</div>
         <div class="heading">Verify your email address</div>
         <div class="text">
-            To complete your SignalSync registration, enter the code below.
+            To complete your VeltrixSync registration, enter the code below.
             It expires in <strong>10 minutes</strong>.
         </div>
         <div class="code-container">
@@ -442,16 +442,16 @@ def send_verification_code_email(user, code: str) -> bool:
         </div>
         <div class="notice">
             <p><strong>Security reminder:</strong> Never share this code with anyone.
-            SignalSync will never ask for your code via phone or live chat.</p>
+            VeltrixSync will never ask for your code via phone or live chat.</p>
         </div>
         <div class="divider"></div>
         <div class="text" style="font-size:13px; color:#8fa896;">
-            If you did not create a SignalSync account, you can safely ignore this email.
+            If you did not create a VeltrixSync account, you can safely ignore this email.
         </div>
     </div>
     {_footer_html(user.email)}
     """
-    return send_email(user.email, "Verify your email — SignalSync", _wrap(body))
+    return send_email(user.email, "Verify your email — VeltrixSync", _wrap(body))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -491,7 +491,7 @@ def send_2fa_code_email(user, code: str) -> bool:
     </div>
     {_footer_html(user.email)}
     """
-    return send_email(user.email, "Login verification — SignalSync", _wrap(body))
+    return send_email(user.email, "Login verification — VeltrixSync", _wrap(body))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -509,7 +509,7 @@ def send_password_reset_email(user, token: str, uid: str) -> bool:
         <div class="greeting">Hello {name},</div>
         <div class="heading">Reset your password</div>
         <div class="text">
-            We received a request to reset the password for your SignalSync account.
+            We received a request to reset the password for your VeltrixSync account.
             Click the button below to choose a new password. This link expires in
             <strong>1 hour</strong>.
         </div>
@@ -527,7 +527,7 @@ def send_password_reset_email(user, token: str, uid: str) -> bool:
     </div>
     {_footer_html(user.email)}
     """
-    return send_email(user.email, "Password reset — SignalSync", _wrap(body))
+    return send_email(user.email, "Password reset — VeltrixSync", _wrap(body))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -545,7 +545,7 @@ def send_password_changed_email(user) -> bool:
         <div class="greeting">Hello {name},</div>
         <div class="heading">Your password has been changed</div>
         <div class="text">
-            This is a confirmation that the password for your SignalSync account was
+            This is a confirmation that the password for your VeltrixSync account was
             successfully updated on <strong>{now}</strong>.
         </div>
         <div class="notice">
@@ -561,7 +561,7 @@ def send_password_changed_email(user) -> bool:
     </div>
     {_footer_html(user.email)}
     """
-    return send_email(user.email, "Password changed — SignalSync", _wrap(body))
+    return send_email(user.email, "Password changed — VeltrixSync", _wrap(body))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -609,7 +609,7 @@ def send_admin_payment_intent_notification(user, currency: str, dollar_amount, c
         <div class="footer-text">Admin notification &middot; Payment Intent &middot; {now}</div>
     </div>
     """
-    subject = f"[SignalSync] Payment Intent — {user.email} — ${dollar_amount}"
+    subject = f"[VeltrixSync] Payment Intent — {user.email} — ${dollar_amount}"
     return send_email(admin_email, subject, _wrap(body))
 
 
@@ -661,7 +661,7 @@ def send_admin_deposit_notification(user, transaction) -> bool:
         <div class="footer-text">Admin notification &middot; Action required &middot; {now}</div>
     </div>
     """
-    subject = f"[SignalSync] Deposit Request — {user.email} — ${transaction.amount}"
+    subject = f"[VeltrixSync] Deposit Request — {user.email} — ${transaction.amount}"
     return send_email(admin_email, subject, _wrap(body))
 
 
@@ -726,5 +726,5 @@ def send_admin_withdrawal_notification(user, transaction, payment_method=None) -
         <div class="footer-text">Admin notification &middot; Urgent action required &middot; {now}</div>
     </div>
     """
-    subject = f"[SignalSync] Withdrawal Request — {user.email} — ${transaction.amount}"
+    subject = f"[VeltrixSync] Withdrawal Request — {user.email} — ${transaction.amount}"
     return send_email(admin_email, subject, _wrap(body))

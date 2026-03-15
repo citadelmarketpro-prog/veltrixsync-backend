@@ -195,6 +195,14 @@ class MeView(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
+        # Special case: client sent remove_avatar=1 → wipe the avatar field
+        if request.data.get("remove_avatar") in ("1", "true", True):
+            request.user.avatar = None
+            request.user.save(update_fields=["avatar"])
+            return Response(
+                UserProfileSerializer(request.user, context={"request": request}).data
+            )
+
         serializer = UpdateProfileSerializer(
             request.user,
             data=request.data,

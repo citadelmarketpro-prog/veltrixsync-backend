@@ -9,11 +9,11 @@
   <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="stat-card text-center">
       <p class="text-xs mb-1" style="color:#8fa896;">Current Balance</p>
-      <p class="text-2xl font-bold" style="color:#22c55e;">${{ obj.balance|floatformat:2 }}</p>
+      <p class="text-base font-bold truncate" title="${{ obj.balance|floatformat:2 }}" style="color:#22c55e;">${{ obj.balance|floatformat:2 }}</p>
     </div>
     <div class="stat-card text-center">
       <p class="text-xs mb-1" style="color:#8fa896;">Current Profit</p>
-      <p class="text-2xl font-bold" style="color:#B0D45A;">${{ obj.profit|floatformat:2 }}</p>
+      <p class="text-base font-bold truncate" title="${{ obj.profit|floatformat:2 }}" style="color:#B0D45A;">${{ obj.profit|floatformat:2 }}</p>
     </div>
   </div>
 
