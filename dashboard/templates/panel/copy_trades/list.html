@@ -1,0 +1,154 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}Copy Trades — SignalSync Admin{% endblock %}
+{% block heading %}Copy Trades{% endblock %}
+{% block breadcrumb %}All copy relationships and cancel requests{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-3">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search user or trader…" class="form-control" style="max-width:240px;" />
+    <select name="status" class="form-control" style="max-width:200px;">
+      <option value="">All statuses</option>
+      {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if status_f == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if q or status_f %}<a href="{% url 'panel:copy_trade_list' %}" class="btn btn-ghost">Clear</a>{% endif %}
+  </form>
+</div>
+
+<!-- Cancel Requests Alert -->
+{% with pending=page_obj.object_list %}
+{% if status_f == "cancel_requested" or not status_f %}
+<div class="panel-card mb-6">
+  <div class="flex items-center gap-3 px-5 py-4 border-b" style="border-color:#1e3827;">
+    <div class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
+    <h3 class="font-semibold" style="color:#f0f0f0;">
+      Cancel Requests
+      <span class="ml-2 text-xs px-2 py-0.5 rounded-full font-normal" style="background:#2a1f00; color:#fbbf24;">
+        Requires Action
+      </span>
+    </h3>
+  </div>
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr>
+      <th>User</th><th>Trader</th><th>Allocated</th><th>P&amp;L</th><th>Copying Since</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for rel in page_obj %}
+    {% if rel.status == "cancel_requested" %}
+    <tr style="background:#1a1200;">
+      <td>
+        <a href="{% url 'panel:user_detail' rel.copier.pk %}" style="color:#B0D45A;" class="hover:underline font-medium">{{ rel.copier.email }}</a>
+        <p class="text-xs" style="color:#8fa896;">{{ rel.copier.get_full_name }}</p>
+      </td>
+      <td>
+        <a href="{% url 'panel:trader_detail' rel.trader.pk %}" style="color:#f0f0f0;" class="hover:underline font-medium">{{ rel.trader.name }}</a>
+      </td>
+      <td style="color:#f0f0f0; font-weight:600;">${{ rel.allocated_amount|floatformat:2|intcomma }}</td>
+      <td style="color:{% if rel.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">
+        {% if rel.pl >= 0 %}+{% endif %}${{ rel.pl|floatformat:2|intcomma }}
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ rel.started_at|date:"M d, Y" }}</td>
+      <td>
+        <div class="flex gap-2">
+          <form method="post" action="{% url 'panel:copy_trade_approve_cancel' rel.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" style="padding:4px 10px; font-size:11px;">Approve Cancel</button>
+          </form>
+          <form method="post" action="{% url 'panel:copy_trade_reject_cancel' rel.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Keep Active</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endif %}
+    {% empty %}
+    <tr><td colspan="6" style="text-align:center; color:#8fa896; padding:20px;">No cancel requests.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- All Copy Relationships -->
+<div class="panel-card">
+  <div class="px-5 py-4 border-b" style="border-color:#1e3827;">
+    <h3 class="font-semibold" style="color:#f0f0f0;">All Copy Relationships</h3>
+  </div>
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr>
+      <th>User</th><th>Trader</th><th>Status</th><th>Allocated</th><th>P&amp;L</th><th>Since</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for rel in page_obj %}
+    <tr>
+      <td>
+        <a href="{% url 'panel:user_detail' rel.copier.pk %}" style="color:#B0D45A;" class="hover:underline font-medium">{{ rel.copier.email }}</a>
+        <p class="text-xs" style="color:#8fa896;">{{ rel.copier.get_full_name }}</p>
+      </td>
+      <td>
+        <a href="{% url 'panel:trader_detail' rel.trader.pk %}" style="color:#f0f0f0;" class="font-medium hover:underline">{{ rel.trader.name }}</a>
+      </td>
+      <td>
+        {% if rel.status == "active" %}
+          <span class="badge badge-green">Active</span>
+        {% elif rel.status == "cancel_requested" %}
+          <span class="badge badge-yellow">Cancel Requested</span>
+        {% else %}
+          <span class="badge badge-gray">Cancelled</span>
+        {% endif %}
+      </td>
+      <td style="color:#f0f0f0; font-weight:600;">${{ rel.allocated_amount|floatformat:2|intcomma }}</td>
+      <td style="color:{% if rel.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">
+        {% if rel.pl >= 0 %}+{% endif %}${{ rel.pl|floatformat:2|intcomma }}
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ rel.started_at|date:"M d, Y" }}</td>
+      <td>
+        <div class="flex gap-2">
+          {% if rel.status == "cancel_requested" %}
+          <form method="post" action="{% url 'panel:copy_trade_approve_cancel' rel.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" style="padding:4px 10px; font-size:11px;">Approve Cancel</button>
+          </form>
+          <form method="post" action="{% url 'panel:copy_trade_reject_cancel' rel.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Keep Active</button>
+          </form>
+          {% elif rel.status == "active" %}
+          <a href="{% url 'panel:investor_add_trade' rel.pk %}" class="btn btn-primary" style="padding:4px 10px; font-size:11px;">+ Add Trade</a>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status_f }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status_f }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <p>No copy relationships found.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

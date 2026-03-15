@@ -1,0 +1,167 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}{{ obj.email }} — SignalSync Admin{% endblock %}
+{% block heading %}User Detail{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:user_list' %}" style="color:#B0D45A;">Users</a> / {{ obj.email }}{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:user_edit' obj.pk %}" class="btn btn-ghost text-xs">Edit</a>
+  <a href="{% url 'panel:user_adjust_funds' obj.pk %}" class="btn btn-primary text-xs">Adjust Funds</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left: profile -->
+  <div class="lg:col-span-1 space-y-4">
+    <div class="panel-card p-6">
+      <div class="flex items-center gap-4 mb-5">
+        {% if obj.avatar %}<img src="{{ obj.avatar.url }}" class="w-16 h-16 rounded-full object-cover" />
+        {% else %}
+        <div class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold" style="background:#1e3827; color:#B0D45A;">
+          {{ obj.email|first|upper }}
+        </div>
+        {% endif %}
+        <div>
+          <h2 class="text-base font-bold" style="color:#f0f0f0;">
+            {% if obj.first_name or obj.last_name %}{{ obj.first_name }} {{ obj.last_name }}{% else %}{{ obj.username }}{% endif %}
+          </h2>
+          <p class="text-xs" style="color:#8fa896;">{{ obj.email }}</p>
+          {% if not obj.is_active %}<span class="badge badge-red mt-1">Inactive</span>{% endif %}
+        </div>
+      </div>
+
+      <!-- Financials -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Balance</p>
+          <p class="text-lg font-bold" style="color:#22c55e;">${{ obj.balance|floatformat:2|intcomma }}</p>
+        </div>
+        <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Profit</p>
+          <p class="text-lg font-bold" style="color:#B0D45A;">${{ obj.profit|floatformat:2|intcomma }}</p>
+        </div>
+        <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Invested</p>
+          <p class="text-lg font-bold" style="color:#f0f0f0;">${{ obj.invested_value|floatformat:2|intcomma }}</p>
+        </div>
+        <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">ROI</p>
+          <p class="text-lg font-bold" style="color:#f0f0f0;">{{ obj.roi|floatformat:2 }}%</p>
+        </div>
+      </div>
+
+      <!-- KYC Status -->
+      <div class="rounded-lg p-4 mb-4" style="background:#0d2016; border:1px solid #1e3827;">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">KYC Status</p>
+        <div class="flex items-center justify-between">
+          {% if obj.kyc_status == "approved"      %}<span class="badge badge-green">Approved</span>
+          {% elif obj.kyc_status == "submitted"    %}<span class="badge badge-yellow">Submitted</span>
+          {% elif obj.kyc_status == "under_review" %}<span class="badge badge-blue">In Review</span>
+          {% elif obj.kyc_status == "rejected"     %}<span class="badge badge-red">Rejected</span>
+          {% else %}<span class="badge badge-gray">Not submitted</span>{% endif %}
+          {% if obj.kyc_reviewed_at %}<span class="text-xs" style="color:#8fa896;">{{ obj.kyc_reviewed_at|date:"M d, Y" }}</span>{% endif %}
+        </div>
+        {% if obj.kyc_reject_reason %}
+          <p class="text-xs mt-2 p-2 rounded" style="background:#2a1010; color:#f87171;">{{ obj.kyc_reject_reason }}</p>
+        {% endif %}
+      </div>
+
+      <!-- KYC Actions -->
+      {% if obj.kyc_status in "submitted,under_review" %}
+      <div class="flex gap-2">
+        <form method="post" action="{% url 'panel:user_approve_kyc' obj.pk %}" class="flex-1">
+          {% csrf_token %}<button type="submit" class="btn btn-success w-full justify-center text-xs">Approve KYC</button>
+        </form>
+        <a href="{% url 'panel:user_reject_kyc' obj.pk %}" class="btn btn-danger flex-1 justify-center text-xs">Reject KYC</a>
+      </div>
+      {% elif obj.kyc_status == "approved" %}
+      <a href="{% url 'panel:user_reject_kyc' obj.pk %}" class="btn btn-danger w-full justify-center text-xs">Revoke KYC</a>
+      {% elif obj.kyc_status in "not_submitted,rejected" %}
+      <form method="post" action="{% url 'panel:user_approve_kyc' obj.pk %}">
+        {% csrf_token %}<button type="submit" class="btn btn-success w-full justify-center text-xs">Approve KYC Manually</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- Meta -->
+    <div class="panel-card p-5">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:#8fa896;">Account Info</p>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span style="color:#8fa896;">Username</span><span style="color:#f0f0f0;">{{ obj.username }}</span></div>
+        <div class="flex justify-between"><span style="color:#8fa896;">Joined</span><span style="color:#f0f0f0;">{{ obj.date_joined|date:"M d, Y" }}</span></div>
+        <div class="flex justify-between"><span style="color:#8fa896;">Trading days</span><span style="color:#f0f0f0;">{{ obj.trading_days }}</span></div>
+        <div class="flex justify-between"><span style="color:#8fa896;">Staff</span><span>{% if obj.is_staff %}<span class="badge badge-blue">Yes</span>{% else %}<span class="badge badge-gray">No</span>{% endif %}</span></div>
+        <div class="flex justify-between"><span style="color:#8fa896;">Active</span><span>{% if obj.is_active %}<span class="badge badge-green">Yes</span>{% else %}<span class="badge badge-red">No</span>{% endif %}</span></div>
+      </div>
+      <div class="flex gap-2 mt-4 pt-4 border-t" style="border-color:#1e3827;">
+        <a href="{% url 'panel:user_edit' obj.pk %}" class="btn btn-ghost text-xs flex-1 justify-center">Edit User</a>
+        <a href="{% url 'panel:user_delete' obj.pk %}" class="btn btn-danger text-xs flex-1 justify-center">Delete</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: activity -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Transactions -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Recent Transactions</h3>
+        <a href="{% url 'panel:transaction_list' %}?q={{ obj.email }}" style="color:#B0D45A;" class="text-xs font-semibold">View all</a>
+      </div>
+      {% if transactions %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Asset</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for tx in transactions %}
+        <tr>
+          <td style="font-size:12px; color:#8fa896;">{{ tx.created_at|date:"M d, Y H:i" }}</td>
+          <td>{% if tx.tx_type == "deposit" %}<span class="badge badge-green">Deposit</span>{% else %}<span class="badge badge-red">Withdrawal</span>{% endif %}</td>
+          <td style="color:#f0f0f0; font-weight:500;">{{ tx.asset }}</td>
+          <td style="color:#f0f0f0; font-weight:600;">${{ tx.amount_usd|floatformat:2|intcomma }}</td>
+          <td>
+            {% if tx.status == "completed" %}<span class="badge badge-green">Completed</span>
+            {% elif tx.status == "pending"  %}<span class="badge badge-yellow">Pending</span>
+            {% else %}<span class="badge badge-red">Rejected</span>{% endif %}
+          </td>
+          <td><a href="{% url 'panel:transaction_detail' tx.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">View</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No transactions found</p></div>
+      {% endif %}
+    </div>
+
+    <!-- Copied Traders -->
+    <div class="panel-card">
+      <div class="card-header"><h3>Copying Traders</h3></div>
+      {% if copies %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Trader</th><th>Allocated</th><th>P&amp;L</th><th>Since</th></tr></thead>
+        <tbody>
+        {% for c in copies %}
+        <tr>
+          <td><a href="{% url 'panel:trader_detail' c.trader.pk %}" style="color:#B0D45A;" class="font-medium hover:underline">{{ c.trader.name }}</a></td>
+          <td style="color:#f0f0f0; font-weight:600;">${{ c.allocated_amount|floatformat:2|intcomma }}</td>
+          <td style="color:{% if c.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">
+            {% if c.pl >= 0 %}+{% endif %}${{ c.pl|floatformat:2|intcomma }}
+          </td>
+          <td style="color:#8fa896; font-size:12px;">{{ c.started_at|date:"M d, Y" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>Not copying any traders</p></div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ action }} Trade History — SignalSync Admin{% endblock %}
+{% block heading %}{{ action }} Trade History{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / {{ action }} History{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <div class="panel-card px-6 py-6">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="mb-4">
+        <label class="block text-xs font-semibold mb-1.5" style="color:#8fa896; text-transform:uppercase; letter-spacing:.05em;">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ field.errors|join:", " }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="flex gap-3 mt-6">
+        <button type="submit" class="btn btn-primary flex-1">{{ action }} History Entry</button>
+        <a href="{% url 'panel:trader_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

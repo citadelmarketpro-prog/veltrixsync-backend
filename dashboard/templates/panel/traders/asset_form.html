@@ -1,0 +1,27 @@
+{% extends "panel/base.html" %}
+{% block title %}Add Asset — {{ obj.name }}{% endblock %}
+{% block heading %}Add Top Asset{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / Add Asset{% endblock %}
+{% block content %}
+<div class="max-w-lg">
+  <div class="panel-card p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid grid-cols-2 gap-4">
+        <div class="mb-4"><label class="form-label">Icon (emoji)</label><input type="text" name="icon" class="form-control" placeholder="e.g. ₿" /></div>
+        <div class="mb-4"><label class="form-label">Name *</label><input type="text" name="name" class="form-control" required placeholder="Bitcoin" /></div>
+        <div class="mb-4"><label class="form-label">Ticker</label><input type="text" name="ticker" class="form-control" placeholder="BTC" /></div>
+        <div class="mb-4"><label class="form-label">Risk Label</label><input type="text" name="risk_label" class="form-control" value="Avg. Risk" /></div>
+        <div class="mb-4"><label class="form-label">Avg Return (%)</label><input type="number" name="avg_return" class="form-control" step="0.01" value="0" /></div>
+        <div class="mb-4"><label class="form-label">Avg Risk (%)</label><input type="number" name="avg_risk" class="form-control" step="0.01" value="0" /></div>
+        <div class="mb-4"><label class="form-label">Success Rate (%)</label><input type="number" name="success_rate" class="form-control" step="0.01" value="0" /></div>
+        <div class="mb-4"><label class="form-label">Order</label><input type="number" name="order" class="form-control" value="0" /></div>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">Add Asset</button>
+        <a href="{% url 'panel:trader_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

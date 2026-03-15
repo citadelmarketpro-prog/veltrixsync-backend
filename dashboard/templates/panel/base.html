@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}SignalSync Admin{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       "#0b1c11",
+            bgalt:    "#0d2016",
+            card:     "#132b1a",
+            border:   "#1e3827",
+            fg:       "#f0f0f0",
+            muted:    "#8fa896",
+            primary:  "#B0D45A",
+            profit:   "#22c55e",
+            loss:     "#f87171",
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background-color: #0b1c11; color: #f0f0f0; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d2016; }
+    ::-webkit-scrollbar-thumb { background: #1e3827; border-radius: 3px; }
+
+    /* ---------- Sidebar ---------- */
+    #sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 240px;
+      height: 100vh;
+      background: #081510;
+      border-right: 1px solid #1e3827;
+      display: flex;
+      flex-direction: column;
+      z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      overflow-y: auto;
+    }
+    #sidebar.open { transform: translateX(0); }
+
+    /* ---------- Overlay ---------- */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 40;
+    }
+    #overlay.show { display: block; }
+
+    /* ---------- Main ---------- */
+    #main {
+      min-height: 100vh;
+      background: #0d2016;
+      transition: margin-left 0.25s ease;
+    }
+
+    /* ---------- Desktop: always show sidebar ---------- */
+    @media (min-width: 1024px) {
+      #sidebar { transform: translateX(0) !important; }
+      #main { margin-left: 240px; }
+      #hamburger { display: none !important; }
+      #overlay { display: none !important; }
+    }
+
+    /* ---------- Components ---------- */
+    .sidebar-link { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; font-size:14px; font-weight:500; color:#8fa896; transition:all .15s; text-decoration:none; }
+    .sidebar-link:hover, .sidebar-link.active { background:#1e3827; color:#f0f0f0; }
+    .sidebar-link.active { color:#B0D45A; }
+    .stat-card { background:#132b1a; border:1px solid #1e3827; border-radius:12px; padding:24px; }
+    .data-table { width:100%; border-collapse:collapse; }
+    .data-table th { text-align:left; padding:12px 16px; font-size:12px; font-weight:600; color:#8fa896; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #1e3827; }
+    .data-table td { padding:14px 16px; font-size:14px; border-bottom:1px solid #1e3827; vertical-align:middle; }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table tr:hover td { background:rgba(30,56,39,.3); }
+    .badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-green  { background:#1a3020; color:#22c55e; }
+    .badge-yellow { background:#2a2010; color:#fbbf24; }
+    .badge-red    { background:#2a1010; color:#f87171; }
+    .badge-blue   { background:#0f1f2a; color:#60a5fa; }
+    .badge-gray   { background:#1a2020; color:#8fa896; }
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; border:none; text-decoration:none; }
+    .btn-primary  { background:#B0D45A; color:#001011; }
+    .btn-primary:hover { background:#c4e870; }
+    .btn-danger   { background:#2a1010; color:#f87171; border:1px solid #3a1515; }
+    .btn-danger:hover { background:#3a1515; }
+    .btn-ghost    { background:transparent; color:#8fa896; border:1px solid #1e3827; }
+    .btn-ghost:hover { background:#1e3827; color:#f0f0f0; }
+    .btn-success  { background:#1a3020; color:#22c55e; border:1px solid #1e3827; }
+    .btn-success:hover { background:#22c55e; color:#001011; }
+    .form-label   { display:block; font-size:12px; font-weight:600; color:#8fa896; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+    .form-control,
+    input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
+    select,
+    textarea { width:100%; background:#0d2016; border:1px solid #1e3827; border-radius:8px; padding:10px 14px; color:#f0f0f0; font-size:14px; outline:none; transition:border-color .15s; box-sizing:border-box; }
+    .form-control:focus,
+    input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):focus,
+    select:focus,
+    textarea:focus { border-color:#B0D45A; }
+    .form-control option,
+    select option { background:#132b1a; }
+    select, select.form-control { cursor:pointer; }
+    textarea, textarea.form-control { resize:vertical; min-height:80px; }
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+    .page-title  { font-size:22px; font-weight:700; color:#f0f0f0; }
+    .page-subtitle { font-size:13px; color:#8fa896; margin-top:2px; }
+    .flash-msg { padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:500; }
+    .flash-success { background:#1a3020; color:#22c55e; border:1px solid #1e3827; }
+    .flash-error   { background:#2a1010; color:#f87171; border:1px solid #3a1515; }
+    .flash-warning { background:#2a2010; color:#fbbf24; border:1px solid #3a2515; }
+    .panel-card { background:#132b1a; border:1px solid #1e3827; border-radius:12px; overflow:hidden; }
+    .card-header { padding:16px 20px; border-bottom:1px solid #1e3827; display:flex; align-items:center; justify-content:space-between; }
+    .card-header h3 { font-size:14px; font-weight:700; color:#f0f0f0; }
+    .empty-state { text-align:center; padding:48px 24px; color:#8fa896; }
+    input[type=checkbox] { accent-color:#B0D45A; width:16px; height:16px; cursor:pointer; }
+    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .data-table th, .data-table td { white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<!-- Mobile overlay -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <!-- Logo -->
+  <div style="padding:24px 20px 20px; border-bottom:1px solid #1e3827; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; border-radius:8px; background:#B0D45A; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="#001011"/>
+        </svg>
+      </div>
+      <div>
+        <div style="font-size:14px; font-weight:700; color:#f0f0f0;">SignalSync</div>
+        <div style="font-size:11px; color:#8fa896;">Admin Panel</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav style="flex:1; padding:16px 12px; overflow-y:auto;">
+    <a href="{% url 'panel:dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Dashboard
+    </a>
+
+    <div style="padding:14px 16px 4px; font-size:10px; font-weight:700; color:#4a6655; text-transform:uppercase; letter-spacing:.1em;">Users</div>
+
+    <a href="{% url 'panel:user_list' %}" class="sidebar-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Users
+    </a>
+
+    <a href="{% url 'panel:user_create' %}" class="sidebar-link {% if request.resolver_match.url_name == 'user_create' %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+      </svg>
+      Create User
+    </a>
+
+    <div style="padding:14px 16px 4px; font-size:10px; font-weight:700; color:#4a6655; text-transform:uppercase; letter-spacing:.1em;">Trading</div>
+
+    <a href="{% url 'panel:trader_list' %}" class="sidebar-link {% if 'trader' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+        <polyline points="16 7 22 7 22 13"/>
+      </svg>
+      Traders
+    </a>
+
+    <a href="{% url 'panel:tag_list' %}" class="sidebar-link {% if 'tag' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+        <line x1="7" y1="7" x2="7.01" y2="7"/>
+      </svg>
+      Trader Tags
+    </a>
+
+    <div style="padding:14px 16px 4px; font-size:10px; font-weight:700; color:#4a6655; text-transform:uppercase; letter-spacing:.1em;">Copy Trading</div>
+
+    <a href="{% url 'panel:copy_trade_list' %}" class="sidebar-link {% if 'copy_trade' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+        <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+      Copy Trades
+    </a>
+
+    <a href="{% url 'panel:investor_list' %}" class="sidebar-link {% if 'investor' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Investors
+    </a>
+
+    <div style="padding:14px 16px 4px; font-size:10px; font-weight:700; color:#4a6655; text-transform:uppercase; letter-spacing:.1em;">Finance</div>
+
+    <a href="{% url 'panel:transaction_list' %}" class="sidebar-link {% if 'transaction' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <line x1="2" y1="10" x2="22" y2="10"/>
+      </svg>
+      Transactions
+    </a>
+
+    <a href="{% url 'panel:wallet_list' %}" class="sidebar-link {% if 'wallet' in request.resolver_match.url_name %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+      </svg>
+      Wallets
+    </a>
+  </nav>
+
+  <!-- Bottom user -->
+  <div style="padding:16px; border-top:1px solid #1e3827; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <div style="width:34px; height:34px; border-radius:50%; background:#1e3827; color:#B0D45A; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;">
+        {{ request.user.email|first|upper }}
+      </div>
+      <div style="min-width:0; flex:1;">
+        <div style="font-size:12px; font-weight:600; color:#f0f0f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ request.user.email }}</div>
+        <div style="font-size:11px; color:#B0D45A;">Superuser</div>
+      </div>
+    </div>
+    <a href="{% url 'panel:logout' %}" class="sidebar-link" style="background:#2a1010; color:#f87171; justify-content:center; font-size:12px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sign Out
+    </a>
+  </div>
+</aside>
+
+<!-- Main -->
+<div id="main">
+  <!-- Top bar -->
+  <header style="position:sticky; top:0; z-index:30; background:#0b1c11; border-bottom:1px solid #1e3827; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; gap:12px;">
+    <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+      <!-- Hamburger -->
+      <button id="hamburger" onclick="openSidebar()" style="background:transparent; border:1px solid #1e3827; border-radius:8px; padding:8px; cursor:pointer; color:#8fa896; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div style="min-width:0;">
+        <h1 style="font-size:18px; font-weight:700; color:#f0f0f0; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{% block heading %}Admin{% endblock %}</h1>
+        {% block breadcrumb %}<p style="font-size:12px; color:#8fa896; margin:2px 0 0;">{% endblock %}</p>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+      {% if pending_count %}<span class="badge badge-yellow">{{ pending_count }} pending</span>{% endif %}
+      {% block header_actions %}{% endblock %}
+    </div>
+  </header>
+
+  <!-- Flash messages -->
+  <div style="padding:20px 24px 0;">
+    {% for message in messages %}
+      <div class="flash-msg {% if message.tags == 'success' %}flash-success{% elif message.tags == 'error' %}flash-error{% else %}flash-warning{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Content -->
+  <div style="padding:24px;">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script>
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  // On resize, reset if going desktop
+  window.addEventListener('resize', function() {
+    if (window.innerWidth >= 1024) {
+      closeSidebar();
+    }
+  });
+</script>
+
+</body>
+</html>

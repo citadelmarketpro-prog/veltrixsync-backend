@@ -1,0 +1,37 @@
+{% extends "panel/base.html" %}
+{% block title %}Add Trade — SignalSync Admin{% endblock %}
+{% block heading %}Add Trade{% endblock %}
+{% block breadcrumb %}Inject a trade into this investor's copy portfolio{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+  <!-- Investor context card -->
+  <div class="panel-card mb-6 px-5 py-4">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:#1e3827; color:#B0D45A;">
+        {{ inv_user.email|first|upper }}
+      </div>
+      <div>
+        <p class="font-semibold" style="color:#f0f0f0;">{{ inv_user.email }}</p>
+        <p class="text-xs" style="color:#8fa896;">{{ inv_user.get_full_name|default:"—" }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade form -->
+  <div class="panel-card px-6 py-6">
+    <h2 class="text-base font-semibold mb-5" style="color:#f0f0f0;">Trade Details</h2>
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        {% include "panel/partials/form_field.html" with field=field %}
+      {% endfor %}
+
+      <div class="flex gap-3 mt-6">
+        <button type="submit" class="btn btn-primary flex-1">Add Trade</button>
+        <a href="{% url 'panel:investor_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

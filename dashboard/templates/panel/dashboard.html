@@ -1,0 +1,138 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}Dashboard — SignalSync Admin{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block breadcrumb %}Overview of platform activity{% endblock %}
+
+{% block content %}
+<!-- Stat Grid -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+  <div class="stat-card">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Total Users</p>
+    <p class="text-3xl font-bold" style="color:#f0f0f0;">{{ total_users }}</p>
+    <p class="text-xs mt-1" style="color:#B0D45A;">Registered accounts</p>
+  </div>
+  <div class="stat-card">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">KYC Pending</p>
+    <p class="text-3xl font-bold" style="color:#fbbf24;">{{ kyc_pending }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">Awaiting review</p>
+  </div>
+  <div class="stat-card">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">KYC Approved</p>
+    <p class="text-3xl font-bold" style="color:#22c55e;">{{ kyc_approved }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">Verified users</p>
+  </div>
+  <div class="stat-card">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Traders</p>
+    <p class="text-3xl font-bold" style="color:#f0f0f0;">{{ total_traders }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">Active profiles</p>
+  </div>
+  <div class="stat-card">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Pending Tx</p>
+    <p class="text-3xl font-bold" style="color:#f87171;">{{ pending_tx }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">Need action</p>
+  </div>
+</div>
+
+<!-- Finance Row -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="stat-card col-span-1">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Total Deposits</p>
+    <p class="text-2xl font-bold" style="color:#22c55e;">${{ completed_deposits|floatformat:2|intcomma }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">Completed</p>
+  </div>
+  <div class="stat-card col-span-1">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Total Withdrawals</p>
+    <p class="text-2xl font-bold" style="color:#f87171;">${{ completed_withdrawals|floatformat:2|intcomma }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">Completed</p>
+  </div>
+  <div class="stat-card col-span-1">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Platform Balance</p>
+    <p class="text-2xl font-bold" style="color:#f0f0f0;">${{ total_balance|floatformat:2|intcomma }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">All users</p>
+  </div>
+  <div class="stat-card col-span-1">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color:#8fa896;">Platform Profit</p>
+    <p class="text-2xl font-bold" style="color:#B0D45A;">${{ total_profit|floatformat:2|intcomma }}</p>
+    <p class="text-xs mt-1" style="color:#8fa896;">All users</p>
+  </div>
+</div>
+
+<!-- Tables Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <!-- Recent Transactions -->
+  <div class="panel-card">
+    <div class="card-header">
+      <h3>Recent Transactions</h3>
+      <a href="{% url 'panel:transaction_list' %}" class="text-xs font-semibold" style="color:#B0D45A;">View all</a>
+    </div>
+    {% if recent_tx %}
+    <div class="table-wrapper">
+    <table class="data-table">
+      <thead><tr>
+        <th>User</th><th>Type</th><th>Amount</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+      {% for tx in recent_tx %}
+      <tr>
+        <td><a href="{% url 'panel:transaction_detail' tx.pk %}" style="color:#B0D45A;" class="hover:underline text-xs">{{ tx.user.email|truncatechars:22 }}</a></td>
+        <td>
+          {% if tx.tx_type == "deposit" %}
+            <span class="badge badge-green">Deposit</span>
+          {% else %}
+            <span class="badge badge-red">Withdrawal</span>
+          {% endif %}
+        </td>
+        <td class="font-semibold" style="color:#f0f0f0;">${{ tx.amount_usd|floatformat:2|intcomma }}</td>
+        <td>
+          {% if tx.status == "completed" %}<span class="badge badge-green">Completed</span>
+          {% elif tx.status == "pending"  %}<span class="badge badge-yellow">Pending</span>
+          {% else %}<span class="badge badge-red">Rejected</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><p>No transactions yet</p></div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Users -->
+  <div class="panel-card">
+    <div class="card-header">
+      <h3>Recent Users</h3>
+      <a href="{% url 'panel:user_list' %}" class="text-xs font-semibold" style="color:#B0D45A;">View all</a>
+    </div>
+    {% if recent_users %}
+    <div class="table-wrapper">
+    <table class="data-table">
+      <thead><tr>
+        <th>Email</th><th>KYC</th><th>Balance</th>
+      </tr></thead>
+      <tbody>
+      {% for u in recent_users %}
+      <tr>
+        <td><a href="{% url 'panel:user_detail' u.pk %}" style="color:#B0D45A;" class="hover:underline text-xs">{{ u.email|truncatechars:24 }}</a></td>
+        <td>
+          {% if u.kyc_status == "approved"      %}<span class="badge badge-green">Approved</span>
+          {% elif u.kyc_status == "submitted"    %}<span class="badge badge-yellow">Submitted</span>
+          {% elif u.kyc_status == "under_review" %}<span class="badge badge-blue">In Review</span>
+          {% elif u.kyc_status == "rejected"     %}<span class="badge badge-red">Rejected</span>
+          {% else %}<span class="badge badge-gray">Not submitted</span>{% endif %}
+        </td>
+        <td style="color:#22c55e;">${{ u.balance|floatformat:2|intcomma }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><p>No users yet</p></div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

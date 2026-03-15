@@ -1,0 +1,107 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ action }} Trader — SignalSync Admin{% endblock %}
+{% block heading %}{{ action }} Trader{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_list' %}" style="color:#B0D45A;">Traders</a> / {% if obj %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / {% endif %}{{ action }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <div class="panel-card p-6">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        {% for err in form.non_field_errors %}<div class="flash-msg flash-error mb-4">{{ err }}</div>{% endfor %}
+      {% endif %}
+
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-4 pb-2 border-b" style="color:#8fa896; border-color:#1e3827;">Identity</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="mb-4 col-span-2 md:col-span-1">
+          <label class="form-label">Name *</label>
+          <input type="text" name="name" value="{{ form.name.value|default:'' }}" class="form-control" required />
+        </div>
+        <div class="mb-4 col-span-2 md:col-span-1">
+          <label class="form-label">Specialty</label>
+          <input type="text" name="specialty" value="{{ form.specialty.value|default:'' }}" class="form-control" placeholder="e.g. Crypto Day Trader" />
+        </div>
+        <div class="mb-4 col-span-2">
+          <label class="form-label">Bio</label>
+          <textarea name="bio" class="form-control" rows="3" placeholder="Short trader biography…">{{ form.bio.value|default:'' }}</textarea>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Avatar Image</label>
+          <input type="file" name="avatar" class="form-control" accept="image/*" />
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Avatar Color (fallback)</label>
+          <input type="color" name="avatar_color" value="{{ form.avatar_color.value|default:'#4a7a6a' }}" class="form-control" style="height:42px; padding:4px;" />
+        </div>
+      </div>
+
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-4 pb-2 border-b mt-4" style="color:#8fa896; border-color:#1e3827;">Performance</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="mb-4"><label class="form-label">ROI (%)</label><input type="number" name="roi" value="{{ form.roi.value|default:'0' }}" class="form-control" step="0.01" /></div>
+        <div class="mb-4"><label class="form-label">Win Rate (%)</label><input type="number" name="win_rate" value="{{ form.win_rate.value|default:'0' }}" class="form-control" step="0.01" /></div>
+        <div class="mb-4"><label class="form-label">Copiers Count</label><input type="number" name="copiers_count" value="{{ form.copiers_count.value|default:'0' }}" class="form-control" /></div>
+        <div class="mb-4"><label class="form-label">Followers</label><input type="number" name="followers_count" value="{{ form.followers_count.value|default:'0' }}" class="form-control" /></div>
+        <div class="mb-4"><label class="form-label">Trading Days</label><input type="number" name="trading_days" value="{{ form.trading_days.value|default:'0' }}" class="form-control" /></div>
+        <div class="mb-4"><label class="form-label">Min Capital ($)</label><input type="number" name="min_capital" value="{{ form.min_capital.value|default:'0' }}" class="form-control" step="0.01" /></div>
+      </div>
+
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-4 pb-2 border-b mt-4" style="color:#8fa896; border-color:#1e3827;">Detail Stats</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="mb-4"><label class="form-label">Master PnL ($)</label><input type="number" name="master_pnl" value="{{ form.master_pnl.value|default:'0' }}" class="form-control" step="0.01" /></div>
+        <div class="mb-4"><label class="form-label">Account Assets ($)</label><input type="number" name="account_assets" value="{{ form.account_assets.value|default:'0' }}" class="form-control" step="0.01" /></div>
+        <div class="mb-4"><label class="form-label">Max Drawdown (%)</label><input type="number" name="max_drawdown" value="{{ form.max_drawdown.value|default:'0' }}" class="form-control" step="0.01" /></div>
+        <div class="mb-4"><label class="form-label">Cum. Earnings ($)</label><input type="number" name="cum_earnings" value="{{ form.cum_earnings.value|default:'0' }}" class="form-control" step="0.01" /></div>
+        <div class="mb-4"><label class="form-label">Cum. Copiers</label><input type="number" name="cum_copiers" value="{{ form.cum_copiers.value|default:'0' }}" class="form-control" /></div>
+        <div class="mb-4"><label class="form-label">Profit Share (%)</label><input type="number" name="profit_share" value="{{ form.profit_share.value|default:'0' }}" class="form-control" step="0.01" /></div>
+      </div>
+
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-4 pb-2 border-b mt-4" style="color:#8fa896; border-color:#1e3827;">Categorisation</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="mb-4">
+          <label class="form-label">Risk Level</label>
+          <select name="risk_level" class="form-control">
+            <option value="">— Select —</option>
+            {% for val, label in form.fields.risk_level.choices %}
+              <option value="{{ val }}" {% if form.risk_level.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Market Category</label>
+          <select name="market_category" class="form-control">
+            <option value="">— Select —</option>
+            {% for val, label in form.fields.market_category.choices %}
+              <option value="{{ val }}" {% if form.market_category.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-3 pb-2 border-b mt-4" style="color:#8fa896; border-color:#1e3827;">Tags</h3>
+      <div class="flex flex-wrap gap-3 mb-6 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+        {% for val, label in form.trader_tags.field.choices %}
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="trader_tags" value="{{ val }}"
+            {% if val|stringformat:"s" in form.trader_tags.value|default_if_none:"" %}checked{% endif %}
+            style="accent-color:#B0D45A;" />
+          <span class="text-sm" style="color:#f0f0f0;">{{ label }}</span>
+        </label>
+        {% endfor %}
+        {% if not form.trader_tags.field.choices %}
+          <p class="text-xs" style="color:#8fa896;">No tags available. <a href="{% url 'panel:tag_create' %}" style="color:#B0D45A;">Create one</a></p>
+        {% endif %}
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">{{ action }} Trader</button>
+        {% if obj %}
+          <a href="{% url 'panel:trader_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+        {% else %}
+          <a href="{% url 'panel:trader_list' %}" class="btn btn-ghost">Cancel</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

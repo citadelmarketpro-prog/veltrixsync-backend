@@ -1,0 +1,80 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}Transactions — SignalSync Admin{% endblock %}
+{% block heading %}Transactions{% endblock %}
+{% block breadcrumb %}All deposits and withdrawals{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-3">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search email, asset…" class="form-control" style="max-width:240px;" />
+    <select name="type" class="form-control" style="max-width:160px;">
+      <option value="">All types</option>
+      {% for val, label in type_choices %}<option value="{{ val }}" {% if type_f == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <select name="status" class="form-control" style="max-width:160px;">
+      <option value="">All status</option>
+      {% for val, label in status_choices %}<option value="{{ val }}" {% if status_f == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if q or status_f or type_f %}<a href="{% url 'panel:transaction_list' %}" class="btn btn-ghost">Clear</a>{% endif %}
+  </form>
+</div>
+
+<div class="panel-card">
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr>
+      <th>Date</th><th>User</th><th>Type</th><th>Asset</th><th>Amount</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for tx in page_obj %}
+    <tr>
+      <td style="font-size:12px; color:#8fa896; white-space:nowrap;">{{ tx.created_at|date:"M d, Y H:i" }}</td>
+      <td><a href="{% url 'panel:user_detail' tx.user.pk %}" style="color:#B0D45A;" class="hover:underline text-xs">{{ tx.user.email|truncatechars:24 }}</a></td>
+      <td>
+        {% if tx.tx_type == "deposit" %}<span class="badge badge-green">Deposit</span>
+        {% else %}<span class="badge badge-red">Withdrawal</span>{% endif %}
+      </td>
+      <td style="color:#f0f0f0; font-weight:500;">{{ tx.asset }}</td>
+      <td style="color:#f0f0f0; font-weight:700;">${{ tx.amount_usd|floatformat:2|intcomma }}</td>
+      <td>
+        {% if tx.status == "completed" %}<span class="badge badge-green">Completed</span>
+        {% elif tx.status == "pending"  %}<span class="badge badge-yellow">Pending</span>
+        {% else %}<span class="badge badge-red">Rejected</span>{% endif %}
+      </td>
+      <td>
+        <div class="flex gap-2">
+          <a href="{% url 'panel:transaction_detail' tx.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">View</a>
+          {% if tx.status == "pending" %}
+            <form method="post" action="{% url 'panel:transaction_approve' tx.pk %}">{% csrf_token %}
+              <button type="submit" class="btn btn-success" style="padding:4px 10px; font-size:11px;">Approve</button>
+            </form>
+            <form method="post" action="{% url 'panel:transaction_reject' tx.pk %}">{% csrf_token %}
+              <button type="submit" class="btn btn-danger" style="padding:4px 10px; font-size:11px;">Reject</button>
+            </form>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status_f }}&type={{ type_f }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status_f }}&type={{ type_f }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state"><p>No transactions found</p></div>
+  {% endif %}
+</div>
+{% endblock %}

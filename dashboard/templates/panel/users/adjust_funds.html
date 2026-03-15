@@ -1,0 +1,63 @@
+{% extends "panel/base.html" %}
+{% block title %}Adjust Funds — {{ obj.email }}{% endblock %}
+{% block heading %}Adjust Funds{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:user_list' %}" style="color:#B0D45A;">Users</a> / <a href="{% url 'panel:user_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.email }}</a> / Adjust Funds{% endblock %}
+
+{% block content %}
+<div class="max-w-md">
+  <!-- Current balances -->
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="stat-card text-center">
+      <p class="text-xs mb-1" style="color:#8fa896;">Current Balance</p>
+      <p class="text-2xl font-bold" style="color:#22c55e;">${{ obj.balance|floatformat:2 }}</p>
+    </div>
+    <div class="stat-card text-center">
+      <p class="text-xs mb-1" style="color:#8fa896;">Current Profit</p>
+      <p class="text-2xl font-bold" style="color:#B0D45A;">${{ obj.profit|floatformat:2 }}</p>
+    </div>
+  </div>
+
+  <div class="panel-card p-6">
+    <h3 class="text-sm font-bold mb-5" style="color:#f0f0f0;">Adjust for <span style="color:#B0D45A;">{{ obj.email }}</span></h3>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-5">
+        <label class="form-label">Field to adjust</label>
+        <select name="field" class="form-control">
+          <option value="balance">Main Balance</option>
+          <option value="profit">Profit</option>
+        </select>
+      </div>
+      <div class="mb-5">
+        <label class="form-label">Operation</label>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer border" style="border-color:#1e3827; background:#0d2016;">
+            <input type="radio" name="mode" value="add" checked style="accent-color:#B0D45A;" />
+            <span class="text-sm" style="color:#f0f0f0;">Add</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer border" style="border-color:#1e3827; background:#0d2016;">
+            <input type="radio" name="mode" value="subtract" style="accent-color:#B0D45A;" />
+            <span class="text-sm" style="color:#f0f0f0;">Subtract</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer border" style="border-color:#1e3827; background:#0d2016;">
+            <input type="radio" name="mode" value="set" style="accent-color:#B0D45A;" />
+            <span class="text-sm" style="color:#f0f0f0;">Set exact</span>
+          </label>
+        </div>
+      </div>
+      <div class="mb-5">
+        <label class="form-label">Amount (USD)</label>
+        <input type="number" name="amount" class="form-control" step="0.01" min="0" required placeholder="0.00" />
+      </div>
+      <div class="mb-6">
+        <label class="form-label">Internal Note (optional)</label>
+        <input type="text" name="note" class="form-control" placeholder="e.g. Manual adjustment — bonus" />
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a href="{% url 'panel:user_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

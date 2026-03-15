@@ -1,0 +1,27 @@
+{% extends "panel/base.html" %}
+{% block title %}Add Section — {{ obj.name }}{% endblock %}
+{% block heading %}Add Section{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / Add Section{% endblock %}
+{% block content %}
+<div class="max-w-sm">
+  <div class="panel-card p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-5">
+        <label class="form-label">Section</label>
+        <select name="section" class="form-control">
+          {% for val, label in form.fields.section.choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="mb-5">
+        <label class="form-label">Rank (display order)</label>
+        <input type="number" name="rank" value="1" min="1" class="form-control" />
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">Add Section</button>
+        <a href="{% url 'panel:trader_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

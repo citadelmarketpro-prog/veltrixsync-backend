@@ -1,0 +1,33 @@
+{% comment %}Usage: {% include "panel/partials/form_field.html" with field=form.name %}{% endcomment %}
+<div class="mb-5">
+  <label class="form-label">{{ field.label }}</label>
+  {% if field.field.widget.input_type == "checkbox" %}
+    <div class="flex items-center gap-2 mt-1">
+      {{ field }}
+      <span class="text-sm" style="color:#8fa896;">{{ field.label }}</span>
+    </div>
+  {% elif field.field.widget.input_type == "select" %}
+    <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control">
+      {% for value, display in field.field.choices %}
+        <option value="{{ value }}" {% if field.value == value|stringformat:"s" %}selected{% endif %}>{{ display }}</option>
+      {% endfor %}
+    </select>
+  {% else %}
+    <input
+      type="{{ field.field.widget.input_type }}"
+      name="{{ field.html_name }}"
+      id="{{ field.id_for_label }}"
+      value="{{ field.value|default_if_none:'' }}"
+      class="form-control"
+      {% if field.field.required %}required{% endif %}
+    />
+  {% endif %}
+  {% if field.errors %}
+    {% for err in field.errors %}
+      <p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>
+    {% endfor %}
+  {% endif %}
+  {% if field.help_text %}
+    <p class="text-xs mt-1" style="color:#8fa896;">{{ field.help_text }}</p>
+  {% endif %}
+</div>

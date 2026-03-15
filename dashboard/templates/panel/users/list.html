@@ -1,0 +1,91 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}Users — SignalSync Admin{% endblock %}
+{% block heading %}Users{% endblock %}
+{% block breadcrumb %}Manage registered accounts{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:user_list' %}?kyc=submitted" class="btn btn-ghost text-xs">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    KYC Queue
+  </a>
+  <a href="{% url 'panel:user_create' %}" class="btn btn-primary text-xs">+ Create User</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-3 flex-1">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search email, name, username…" class="form-control" style="max-width:280px;" />
+    <select name="kyc" class="form-control" style="max-width:180px;">
+      <option value="">All KYC status</option>
+      {% for val, label in kyc_choices %}
+        <option value="{{ val }}" {% if kyc_filter == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if q or kyc_filter %}<a href="{% url 'panel:user_list' %}" class="btn btn-ghost">Clear</a>{% endif %}
+  </form>
+</div>
+
+<div class="panel-card">
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr>
+      <th>Email</th><th>Name</th><th>KYC Status</th><th>Balance</th><th>Profit</th><th>Joined</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for u in page_obj %}
+    <tr>
+      <td>
+        <a href="{% url 'panel:user_detail' u.pk %}" class="font-medium hover:underline" style="color:#B0D45A;">{{ u.email }}</a>
+        {% if not u.is_active %}<span class="badge badge-red ml-1">Inactive</span>{% endif %}
+      </td>
+      <td style="color:#f0f0f0;">
+        {% if u.first_name or u.last_name %}{{ u.first_name }} {{ u.last_name }}{% else %}<span style="color:#4a6655;">—</span>{% endif %}
+      </td>
+      <td>
+        {% if u.kyc_status == "approved"      %}<span class="badge badge-green">Approved</span>
+        {% elif u.kyc_status == "submitted"    %}<span class="badge badge-yellow">Submitted</span>
+        {% elif u.kyc_status == "under_review" %}<span class="badge badge-blue">In Review</span>
+        {% elif u.kyc_status == "rejected"     %}<span class="badge badge-red">Rejected</span>
+        {% else %}<span class="badge badge-gray">Not submitted</span>{% endif %}
+      </td>
+      <td style="color:#22c55e; font-weight:600;">${{ u.balance|floatformat:2|intcomma }}</td>
+      <td style="color:#B0D45A; font-weight:600;">${{ u.profit|floatformat:2|intcomma }}</td>
+      <td style="color:#8fa896; font-size:12px;">{{ u.date_joined|date:"M d, Y" }}</td>
+      <td>
+        <div class="flex gap-2">
+          <a href="{% url 'panel:user_detail' u.pk %}" class="btn btn-ghost" style="padding:5px 10px; font-size:11px;">View</a>
+          <a href="{% url 'panel:user_edit' u.pk %}" class="btn btn-ghost" style="padding:5px 10px; font-size:11px;">Edit</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&kyc={{ kyc_filter }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&kyc={{ kyc_filter }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px; color:#1e3827;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    <p class="text-sm">No users found</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

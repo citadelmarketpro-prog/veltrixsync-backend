@@ -1,0 +1,52 @@
+{% extends "panel/base.html" %}
+{% block title %}Bulk Add Trade — SignalSync Admin{% endblock %}
+{% block heading %}Bulk Add Trade{% endblock %}
+{% block breadcrumb %}Inject a trade into multiple investors at once{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+
+  <!-- Selected investors summary -->
+  <div class="panel-card mb-6 px-5 py-4">
+    <div class="flex items-center gap-2 mb-3">
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#8fa896;">Selected Investors</p>
+      <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#1e3827; color:#B0D45A;">{{ users|length }}</span>
+    </div>
+    {% if users %}
+    <div class="flex flex-wrap gap-2">
+      {% for u in users %}
+      <div class="flex items-center gap-1.5 px-2.5 py-1 rounded" style="background:#1e3827; border:1px solid #2a4a2a;">
+        <span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style="background:#2a5a3c; color:#B0D45A;">{{ u.email|first|upper }}</span>
+        <span class="text-xs font-medium" style="color:#f0f0f0;">{{ u.email }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm" style="color:#f87171;">No investors selected. <a href="{% url 'panel:investor_list' %}" style="color:#B0D45A;">Go back</a> and select users first.</p>
+    {% endif %}
+  </div>
+
+  <!-- Trade form -->
+  {% if users %}
+  <div class="panel-card px-6 py-6">
+    <h2 class="text-base font-semibold mb-5" style="color:#f0f0f0;">Trade Details</h2>
+    <p class="text-xs mb-5" style="color:#8fa896;">This trade will be added to all {{ users|length }} selected investor(s).</p>
+    <form method="post">
+      {% csrf_token %}
+      {% for uid in user_ids %}
+      <input type="hidden" name="user_ids" value="{{ uid }}" />
+      {% endfor %}
+
+      {% for field in form %}
+        {% include "panel/partials/form_field.html" with field=field %}
+      {% endfor %}
+
+      <div class="flex gap-3 mt-6">
+        <button type="submit" class="btn btn-primary flex-1">Add Trade to All ({{ users|length }})</button>
+        <a href="{% url 'panel:investor_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

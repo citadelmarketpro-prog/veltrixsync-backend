@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — SignalSync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#0b1c11; color:#f0f0f0; font-family:system-ui,-apple-system,sans-serif; }
+    .form-control { width:100%; background:#0d2016; border:1px solid #1e3827; border-radius:8px; padding:12px 16px; color:#f0f0f0; font-size:14px; outline:none; transition:border-color .15s; }
+    .form-control:focus { border-color:#B0D45A; }
+    .form-label { display:block; font-size:12px; font-weight:600; color:#8fa896; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+    .grid-bg { background-image: radial-gradient(#1e3827 1px, transparent 1px); background-size: 32px 32px; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center grid-bg">
+  <div class="w-full max-w-sm mx-4">
+
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-8">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style="background:#B0D45A;">
+        <svg width="28" height="28" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="#001011"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold" style="color:#f0f0f0;">SignalSync Admin</h1>
+      <p class="text-sm mt-1" style="color:#8fa896;">Superuser access only</p>
+    </div>
+
+    <!-- Card -->
+    <div class="rounded-2xl p-8" style="background:#132b1a; border:1px solid #1e3827;">
+      {% if error %}
+        <div class="mb-5 p-3 rounded-lg text-sm font-medium" style="background:#2a1010; color:#f87171; border:1px solid #3a1515;">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'panel:login' %}">
+        {% csrf_token %}
+        <div class="mb-5">
+          <label class="form-label">Email address</label>
+          <input type="email" name="email" autocomplete="email" required class="form-control" placeholder="admin@signalsync.io" />
+        </div>
+        <div class="mb-6">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" autocomplete="current-password" required class="form-control" placeholder="••••••••" />
+        </div>
+        <button type="submit" class="w-full py-3 rounded-lg font-bold text-sm transition-all hover:opacity-90" style="background:#B0D45A; color:#001011;">
+          Sign in to Admin Panel
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-xs mt-6" style="color:#4a6655;">
+      SignalSync &copy; {% now "Y" %} — Restricted access
+    </p>
+  </div>
+</body>
+</html>

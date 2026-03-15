@@ -1,0 +1,317 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}{{ obj.name }} — SignalSync Admin{% endblock %}
+{% block heading %}Trader Detail{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_list' %}" style="color:#B0D45A;">Traders</a> / {{ obj.name }}{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:trader_edit' obj.pk %}" class="btn btn-ghost text-xs">Edit</a>
+  <a href="{% url 'panel:trader_delete' obj.pk %}" class="btn btn-danger text-xs">Delete</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left: profile -->
+  <div class="space-y-4">
+    <div class="panel-card p-6">
+      <div class="flex items-center gap-4 mb-5">
+        {% if obj.avatar %}<img src="{{ obj.avatar.url }}" class="w-16 h-16 rounded-full object-cover" />
+        {% else %}
+        <div class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold" style="background:{{ obj.avatar_color }}; color:#f0f0f0;">
+          {{ obj.name|first }}
+        </div>
+        {% endif %}
+        <div>
+          <h2 class="font-bold text-base" style="color:#f0f0f0;">{{ obj.name }}</h2>
+          <p class="text-xs" style="color:#8fa896;">{{ obj.specialty }}</p>
+        </div>
+      </div>
+      <p class="text-sm mb-4" style="color:#8fa896;">{{ obj.bio }}</p>
+      <!-- Tags -->
+      <div class="flex flex-wrap gap-1 mb-4">
+        {% for tag in tags %}<span class="badge badge-gray">{{ tag.name }}</span>{% endfor %}
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="p-3 rounded-lg text-center" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">ROI</p>
+          <p class="font-bold" style="color:{% if obj.roi >= 0 %}#22c55e{% else %}#f87171{% endif %};">{% if obj.roi >= 0 %}+{% endif %}{{ obj.roi|floatformat:2 }}%</p>
+        </div>
+        <div class="p-3 rounded-lg text-center" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Win Rate</p>
+          <p class="font-bold" style="color:#B0D45A;">{{ obj.win_rate|floatformat:2 }}%</p>
+        </div>
+        <div class="p-3 rounded-lg text-center" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Copiers</p>
+          <p class="font-bold" style="color:#f0f0f0;">{{ obj.copiers_count }}</p>
+        </div>
+        <div class="p-3 rounded-lg text-center" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Min Capital</p>
+          <p class="font-bold" style="color:#f0f0f0;">${{ obj.min_capital|floatformat:0|intcomma }}</p>
+        </div>
+        <div class="p-3 rounded-lg text-center" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Max Drawdown</p>
+          <p class="font-bold" style="color:#f87171;">{{ obj.max_drawdown|floatformat:2 }}%</p>
+        </div>
+        <div class="p-3 rounded-lg text-center" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Trading Days</p>
+          <p class="font-bold" style="color:#f0f0f0;">{{ obj.trading_days }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections -->
+    <div class="panel-card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold uppercase tracking-widest" style="color:#8fa896;">Page Sections</p>
+        <a href="{% url 'panel:trader_add_section' obj.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">+ Add</a>
+      </div>
+      {% if sections %}
+        {% for sec in sections %}
+        <div class="flex items-center justify-between py-2 border-b" style="border-color:#1e3827;">
+          <div>
+            <p class="text-sm" style="color:#f0f0f0;">{{ sec.get_section_display }}</p>
+            <p class="text-xs" style="color:#8fa896;">Rank #{{ sec.rank }}</p>
+          </div>
+          <form method="post" action="{% url 'panel:trader_remove_section' obj.pk sec.pk %}">
+            {% csrf_token %}<button type="submit" class="text-xs" style="color:#f87171;">Remove</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}
+      <p class="text-xs" style="color:#8fa896;">Not in any section</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Copiers -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Copiers ({{ copiers|length }})</h3>
+      </div>
+      {% if copiers %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>User</th><th>Allocated</th><th>P&amp;L</th><th>Since</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for c in copiers %}
+        <tr>
+          <td><a href="{% url 'panel:user_detail' c.copier.pk %}" class="hover:underline" style="color:#B0D45A;">{{ c.copier.email }}</a></td>
+          <td style="color:#f0f0f0; font-weight:600;">${{ c.allocated_amount|floatformat:2|intcomma }}</td>
+          <td style="color:{% if c.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">{% if c.pl >= 0 %}+{% endif %}${{ c.pl|floatformat:2|intcomma }}</td>
+          <td style="color:#8fa896; font-size:12px;">{{ c.started_at|date:"M d, Y" }}</td>
+          <td>
+            <form method="post" action="{% url 'panel:trader_disconnect_copier' obj.pk c.copier.pk %}">
+              {% csrf_token %}<button type="submit" class="btn btn-danger" style="padding:4px 10px; font-size:11px;">Disconnect</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No copiers yet</p></div>
+      {% endif %}
+    </div>
+
+    <!-- Cancel Requests -->
+    {% if cancel_requests %}
+    <div class="panel-card" style="border-color:#4a2a00;">
+      <div class="card-header" style="background:#1a1200;">
+        <h3 style="color:#fbbf24;">
+          <span class="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse mr-2"></span>
+          Cancel Requests ({{ cancel_requests|length }})
+        </h3>
+      </div>
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>User</th><th>Allocated</th><th>P&amp;L</th><th>Since</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for c in cancel_requests %}
+        <tr style="background:#1a1200;">
+          <td>
+            <a href="{% url 'panel:user_detail' c.copier.pk %}" class="hover:underline font-medium" style="color:#B0D45A;">{{ c.copier.email }}</a>
+            <p class="text-xs" style="color:#8fa896;">{{ c.copier.get_full_name }}</p>
+          </td>
+          <td style="color:#f0f0f0; font-weight:600;">${{ c.allocated_amount|floatformat:2|intcomma }}</td>
+          <td style="color:{% if c.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">{% if c.pl >= 0 %}+{% endif %}${{ c.pl|floatformat:2|intcomma }}</td>
+          <td style="color:#8fa896; font-size:12px;">{{ c.started_at|date:"M d, Y" }}</td>
+          <td>
+            <div class="flex gap-2">
+              <form method="post" action="{% url 'panel:copy_trade_approve_cancel' c.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" style="padding:4px 10px; font-size:11px;">Approve Cancel</button>
+              </form>
+              <form method="post" action="{% url 'panel:copy_trade_reject_cancel' c.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Keep Active</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Assets -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Top Assets</h3>
+        <a href="{% url 'panel:trader_add_asset' obj.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">+ Add</a>
+      </div>
+      {% if assets %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Asset</th><th>Ticker</th><th>Avg Return</th><th>Success Rate</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for a in assets %}
+        <tr>
+          <td>
+            <div class="flex items-center gap-2">
+              {% if a.icon %}<img src="{{ a.icon.url }}" class="w-7 h-7 rounded-full object-cover" />{% endif %}
+              <span style="color:#f0f0f0;">{{ a.name }}</span>
+            </div>
+          </td>
+          <td style="color:#8fa896; font-size:12px;">{{ a.ticker }}</td>
+          <td style="color:{% if a.avg_return >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">{% if a.avg_return >= 0 %}+{% endif %}{{ a.avg_return|floatformat:2 }}%</td>
+          <td style="color:#B0D45A;">{{ a.success_rate|floatformat:2 }}%</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'panel:trader_edit_asset' obj.pk a.pk %}" class="btn btn-ghost" style="padding:3px 8px; font-size:11px;">Edit</a>
+              <form method="post" action="{% url 'panel:trader_delete_asset' obj.pk a.pk %}">
+                {% csrf_token %}<button type="submit" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="return confirm('Delete this asset?')">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No assets added. <a href="{% url 'panel:trader_add_asset' obj.pk %}" style="color:#B0D45A;">Add one</a></p></div>
+      {% endif %}
+    </div>
+
+    <!-- Portfolio Allocation -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Portfolio Allocation</h3>
+        <a href="{% url 'panel:trader_add_allocation' obj.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">+ Add</a>
+      </div>
+      {% if allocs %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Label</th><th>Percentage</th><th>Color</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for a in allocs %}
+        <tr>
+          <td style="color:#f0f0f0;">{{ a.label }}</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="h-2 rounded-full" style="width:{{ a.pct }}px; max-width:120px; background:{{ a.color }};"></div>
+              <span style="color:#f0f0f0; font-weight:600;">{{ a.pct|floatformat:1 }}%</span>
+            </div>
+          </td>
+          <td><span class="badge" style="background:{{ a.color }}20; color:{{ a.color }};">{{ a.color }}</span></td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'panel:trader_edit_allocation' obj.pk a.pk %}" class="btn btn-ghost" style="padding:3px 8px; font-size:11px;">Edit</a>
+              <form method="post" action="{% url 'panel:trader_delete_allocation' obj.pk a.pk %}">
+                {% csrf_token %}<button type="submit" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="return confirm('Delete?')">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No allocation data. <a href="{% url 'panel:trader_add_allocation' obj.pk %}" style="color:#B0D45A;">Add one</a></p></div>
+      {% endif %}
+    </div>
+
+    <!-- Open Positions -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Open Positions ({{ positions|length }})</h3>
+        <a href="{% url 'panel:trader_add_position' obj.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">+ Add</a>
+      </div>
+      {% if positions %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Market</th><th>Direction</th><th>Invested</th><th>P&amp;L</th><th>Value</th><th>Sell</th><th>Buy</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for p in positions %}
+        <tr>
+          <td style="color:#f0f0f0; font-weight:500;">{{ p.market }}</td>
+          <td><span class="badge {% if p.direction == 'Long' %}badge-green{% else %}badge-red{% endif %}">{{ p.direction }}</span></td>
+          <td style="color:#8fa896;">{{ p.invested|floatformat:2 }}%</td>
+          <td style="color:{% if p.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">{% if p.pl >= 0 %}+{% endif %}{{ p.pl|floatformat:2 }}%</td>
+          <td style="color:#8fa896;">{{ p.value|floatformat:2 }}%</td>
+          <td style="color:#f0f0f0;">${{ p.sell_price|floatformat:2|intcomma }}</td>
+          <td style="color:#f0f0f0;">${{ p.buy_price|floatformat:2|intcomma }}</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'panel:trader_edit_position' obj.pk p.pk %}" class="btn btn-ghost" style="padding:3px 8px; font-size:11px;">Edit</a>
+              <form method="post" action="{% url 'panel:trader_delete_position' obj.pk p.pk %}">
+                {% csrf_token %}<button type="submit" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="return confirm('Delete?')">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No positions. <a href="{% url 'panel:trader_add_position' obj.pk %}" style="color:#B0D45A;">Add one</a></p></div>
+      {% endif %}
+    </div>
+
+    <!-- Trade History -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Trade History ({{ history|length }})</h3>
+        <a href="{% url 'panel:trader_add_history' obj.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">+ Add</a>
+      </div>
+      {% if history %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Order</th><th>Position</th><th>Open</th><th>Close</th><th>P&amp;L</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for h in history %}
+        <tr>
+          <td style="color:#f0f0f0; font-weight:500;">{{ h.name }}</td>
+          <td><span class="badge badge-gray">{{ h.order_type }}</span></td>
+          <td style="color:#8fa896; font-size:12px;">{{ h.position }}</td>
+          <td style="color:#8fa896; font-size:11px;">${{ h.open_price|floatformat:2|intcomma }}<br/>{{ h.open_date|date:"M d, Y" }}</td>
+          <td style="color:#8fa896; font-size:11px;">${{ h.close_price|floatformat:2|intcomma }}<br/>{{ h.close_date|date:"M d, Y" }}</td>
+          <td style="color:{% if h.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">{% if h.pl >= 0 %}+{% endif %}{{ h.pl|floatformat:2 }}%</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'panel:trader_edit_history' obj.pk h.pk %}" class="btn btn-ghost" style="padding:3px 8px; font-size:11px;">Edit</a>
+              <form method="post" action="{% url 'panel:trader_delete_history' obj.pk h.pk %}">
+                {% csrf_token %}<button type="submit" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="return confirm('Delete?')">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No history. <a href="{% url 'panel:trader_add_history' obj.pk %}" style="color:#B0D45A;">Add one</a></p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

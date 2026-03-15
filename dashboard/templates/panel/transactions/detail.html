@@ -1,0 +1,97 @@
+{% extends "panel/base.html" %}
+{% load humanize %}
+{% block title %}Transaction {{ obj.tx_id }} — SignalSync Admin{% endblock %}
+{% block heading %}Transaction Detail{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:transaction_list' %}" style="color:#B0D45A;">Transactions</a> / {{ obj.tx_id|truncatechars:16 }}…{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="panel-card p-6 mb-5">
+    <!-- Header row -->
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <div class="flex items-center gap-3 mb-1">
+          {% if obj.tx_type == "deposit" %}
+            <span class="badge badge-green text-sm">Deposit</span>
+          {% else %}
+            <span class="badge badge-red text-sm">Withdrawal</span>
+          {% endif %}
+          {% if obj.status == "completed" %}<span class="badge badge-green">Completed</span>
+          {% elif obj.status == "pending"  %}<span class="badge badge-yellow">Pending</span>
+          {% else %}<span class="badge badge-red">Rejected</span>{% endif %}
+        </div>
+        <p class="text-3xl font-bold mt-2" style="color:#f0f0f0;">${{ obj.amount_usd|floatformat:2|intcomma }}</p>
+        <p class="text-sm mt-1" style="color:#8fa896;">{{ obj.units }} {{ obj.asset }}</p>
+      </div>
+      <p class="text-xs text-right" style="color:#8fa896;">{{ obj.created_at|date:"F d, Y H:i" }}</p>
+    </div>
+
+    <!-- Details grid -->
+    <div class="grid grid-cols-2 gap-y-4 gap-x-6 mb-6 py-4 border-y" style="border-color:#1e3827;">
+      <div>
+        <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">User</p>
+        <a href="{% url 'panel:user_detail' obj.user.pk %}" class="font-medium hover:underline" style="color:#B0D45A;">{{ obj.user.email }}</a>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">Asset</p>
+        <p class="font-medium" style="color:#f0f0f0;">{{ obj.asset }}</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">Units</p>
+        <p class="font-medium font-mono text-sm" style="color:#f0f0f0;">{{ obj.units }}</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">TX ID</p>
+        <p class="font-mono text-xs break-all" style="color:#8fa896;">{{ obj.tx_id }}</p>
+      </div>
+      {% if obj.wallet_address %}
+      <div class="col-span-2">
+        <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">Wallet Address</p>
+        <p class="font-mono text-xs break-all p-2 rounded" style="background:#0d2016; color:#f0f0f0;">{{ obj.wallet_address }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    {% if obj.status == "pending" %}
+    <div class="p-4 rounded-xl mb-0" style="background:#0d2016; border:1px solid #1e3827;">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:#8fa896;">Actions</p>
+      <div class="flex gap-3">
+        <form method="post" action="{% url 'panel:transaction_approve' obj.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Approve {% if obj.tx_type == "deposit" %}— Add ${{ obj.amount_usd|floatformat:2|intcomma }} to balance{% else %}— Deduct ${{ obj.amount_usd|floatformat:2|intcomma }} from balance{% endif %}
+          </button>
+        </form>
+        <form method="post" action="{% url 'panel:transaction_reject' obj.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Reject
+          </button>
+        </form>
+      </div>
+    </div>
+    {% elif obj.status == "completed" %}
+    <div class="p-3 rounded-lg flex items-center gap-2" style="background:#1a3020; border:1px solid #1e3827;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      <p class="text-sm font-medium" style="color:#22c55e;">
+        {% if obj.tx_type == "deposit" %}${{ obj.amount_usd|floatformat:2|intcomma }} was added to {{ obj.user.email }}'s balance.
+        {% else %}${{ obj.amount_usd|floatformat:2|intcomma }} was deducted from {{ obj.user.email }}'s balance.{% endif %}
+      </p>
+    </div>
+    {% else %}
+    <div class="p-3 rounded-lg flex items-center gap-2" style="background:#2a1010; border:1px solid #3a1515;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <p class="text-sm font-medium" style="color:#f87171;">Transaction was rejected. No balance changes were made.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <a href="{% url 'panel:transaction_list' %}" class="btn btn-ghost text-xs">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to list
+  </a>
+</div>
+{% endblock %}

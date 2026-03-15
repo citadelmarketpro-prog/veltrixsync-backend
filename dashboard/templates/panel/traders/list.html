@@ -1,0 +1,88 @@
+{% extends "panel/base.html" %}
+{% block title %}Traders — SignalSync Admin{% endblock %}
+{% block heading %}Traders{% endblock %}
+{% block breadcrumb %}Manage trader profiles{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:trader_create' %}" class="btn btn-primary text-xs">+ New Trader</a>
+{% endblock %}
+
+{% block content %}
+<div class="flex gap-3 mb-6">
+  <form method="get" class="flex gap-3">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search traders…" class="form-control" style="max-width:260px;" />
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if q %}<a href="{% url 'panel:trader_list' %}" class="btn btn-ghost">Clear</a>{% endif %}
+  </form>
+</div>
+
+<div class="panel-card">
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr>
+      <th>Trader</th><th>Specialty</th><th>ROI</th><th>Copiers</th><th>Risk</th><th>Min Capital</th><th>Sections</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for t in page_obj %}
+    <tr>
+      <td>
+        <div class="flex items-center gap-3">
+          {% if t.avatar %}<img src="{{ t.avatar.url }}" class="w-9 h-9 rounded-full object-cover" />
+          {% else %}
+          <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold" style="background:{{ t.avatar_color }}; color:#f0f0f0;">
+            {{ t.name|first }}
+          </div>
+          {% endif %}
+          <div>
+            <a href="{% url 'panel:trader_detail' t.pk %}" class="font-semibold hover:underline" style="color:#B0D45A;">{{ t.name }}</a>
+            <p class="text-xs" style="color:#8fa896;">{{ t.market_category }}</p>
+          </div>
+        </div>
+      </td>
+      <td style="color:#8fa896; font-size:13px;">{{ t.specialty|truncatechars:28 }}</td>
+      <td style="color:{% if t.roi >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">
+        {% if t.roi >= 0 %}+{% endif %}{{ t.roi|floatformat:2 }}%
+      </td>
+      <td style="color:#f0f0f0;">{{ t.copiers_count }}</td>
+      <td>
+        {% if t.risk_level == "high"     %}<span class="badge badge-red">High</span>
+        {% elif t.risk_level == "moderate"%}<span class="badge badge-yellow">Moderate</span>
+        {% elif t.risk_level == "balanced"%}<span class="badge badge-green">Balanced</span>
+        {% elif t.risk_level == "low"    %}<span class="badge badge-blue">Low</span>
+        {% else %}<span class="badge badge-gray">Safe</span>{% endif %}
+      </td>
+      <td style="color:#f0f0f0; font-weight:600;">${{ t.min_capital|floatformat:0 }}</td>
+      <td>
+        {% for sec in t.section_memberships.all %}
+          <span class="badge badge-gray" style="margin:1px;">{{ sec.get_section_display|truncatechars:12 }}</span>
+        {% endfor %}
+      </td>
+      <td>
+        <div class="flex gap-2">
+          <a href="{% url 'panel:trader_detail' t.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">View</a>
+          <a href="{% url 'panel:trader_edit' t.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Edit</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <p>No traders found. <a href="{% url 'panel:trader_create' %}" style="color:#B0D45A;">Create one</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

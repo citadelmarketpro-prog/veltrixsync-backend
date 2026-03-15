@@ -1,0 +1,121 @@
+{% extends "panel/base.html" %}
+{% block title %}Investors — SignalSync Admin{% endblock %}
+{% block heading %}Investors{% endblock %}
+{% block breadcrumb %}All users copying traders{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-3">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by email or name…" class="form-control" style="max-width:240px;" />
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if q %}<a href="{% url 'panel:investor_list' %}" class="btn btn-ghost">Clear</a>{% endif %}
+  </form>
+</div>
+
+<!-- Bulk action bar (hidden until checkbox selected) -->
+<div id="bulk-bar" class="hidden mb-4 flex items-center gap-3 px-4 py-3 rounded-lg" style="background:#1a2e1e; border:1px solid #1e3827;">
+  <span id="bulk-count" class="text-sm font-semibold" style="color:#B0D45A;">0 selected</span>
+  <button type="button" onclick="submitBulk()" class="btn btn-primary" style="padding:6px 16px; font-size:12px;">+ Add Trade to Selected</button>
+  <button type="button" onclick="clearAll()" class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Clear</button>
+</div>
+
+<form id="bulk-form" method="post" action="{% url 'panel:investor_bulk_add_trade' %}">
+  {% csrf_token %}
+  <div id="hidden-user-ids"></div>
+</form>
+
+<div class="panel-card">
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width:40px;">
+          <input type="checkbox" id="select-all" onchange="toggleAll(this)" />
+        </th>
+        <th>Investor</th>
+        <th>Traders Copying</th>
+        <th>Active</th>
+        <th>Cancel Req.</th>
+        <th>Trades</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in page_obj %}
+    <tr>
+      <td>
+        <input type="checkbox" class="user-check" value="{{ u.pk }}" onchange="updateBulk()" />
+      </td>
+      <td>
+        <a href="{% url 'panel:user_detail' u.pk %}" style="color:#B0D45A;" class="font-semibold hover:underline">{{ u.email }}</a>
+        <p class="text-xs" style="color:#8fa896;">{{ u.get_full_name|default:"—" }}</p>
+      </td>
+      <td style="color:#f0f0f0;">{{ u.trader_count }}</td>
+      <td><span class="badge badge-green">{{ u.active_count }}</span></td>
+      <td>
+        {% if u.cancel_count > 0 %}
+        <span class="badge badge-yellow">{{ u.cancel_count }}</span>
+        {% else %}
+        <span style="color:#4a6655;">—</span>
+        {% endif %}
+      </td>
+      <td style="color:#8fa896;">{{ u.copy_trades.count }}</td>
+      <td>
+        <a href="{% url 'panel:investor_add_trade' u.pk %}" class="btn btn-primary" style="padding:4px 12px; font-size:11px;">+ Add Trade</a>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <p>No investors found. Users appear here once they start copying traders.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function updateBulk() {
+  const checked = document.querySelectorAll('.user-check:checked');
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = checked.length + ' selected';
+  bar.classList.toggle('hidden', checked.length === 0);
+}
+function toggleAll(el) {
+  document.querySelectorAll('.user-check').forEach(c => { c.checked = el.checked; });
+  updateBulk();
+}
+function clearAll() {
+  document.querySelectorAll('.user-check').forEach(c => { c.checked = false; });
+  document.getElementById('select-all').checked = false;
+  updateBulk();
+}
+function submitBulk() {
+  const ids = [...document.querySelectorAll('.user-check:checked')].map(c => c.value);
+  const container = document.getElementById('hidden-user-ids');
+  container.innerHTML = '';
+  ids.forEach(id => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'user_ids';
+    inp.value = id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulk-form').submit();
+}
+</script>
+{% endblock %}

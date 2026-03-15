@@ -1,0 +1,22 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ action }} Tag — SignalSync Admin{% endblock %}
+{% block heading %}{{ action }} Tag{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:tag_list' %}" style="color:#B0D45A;">Tags</a> / {{ action }}{% endblock %}
+{% block content %}
+<div class="max-w-sm">
+  <div class="panel-card p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-5">
+        <label class="form-label">Tag Name *</label>
+        <input type="text" name="name" value="{{ form.name.value|default:'' }}" class="form-control" required placeholder="e.g. DeFi" />
+        {% for err in form.name.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">{{ action }} Tag</button>
+        <a href="{% url 'panel:tag_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

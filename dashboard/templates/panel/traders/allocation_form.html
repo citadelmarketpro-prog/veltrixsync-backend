@@ -1,0 +1,21 @@
+{% extends "panel/base.html" %}
+{% block title %}Add Allocation — {{ obj.name }}{% endblock %}
+{% block heading %}Add Portfolio Allocation{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / Add Allocation{% endblock %}
+{% block content %}
+<div class="max-w-sm">
+  <div class="panel-card p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-4"><label class="form-label">Label *</label><input type="text" name="label" class="form-control" required placeholder="e.g. Crypto" /></div>
+      <div class="mb-4"><label class="form-label">Percentage (%)</label><input type="number" name="pct" class="form-control" step="0.01" min="0" max="100" value="0" /></div>
+      <div class="mb-4"><label class="form-label">Color (hex)</label><input type="color" name="color" class="form-control" value="#B0D45A" style="height:42px; padding:4px;" /></div>
+      <div class="mb-5"><label class="form-label">Order</label><input type="number" name="order" class="form-control" value="0" /></div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">Add</button>
+        <a href="{% url 'panel:trader_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

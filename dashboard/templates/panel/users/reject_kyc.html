@@ -1,0 +1,29 @@
+{% extends "panel/base.html" %}
+{% block title %}Reject KYC — {{ obj.email }}{% endblock %}
+{% block heading %}Reject KYC{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:user_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.email }}</a> / Reject KYC{% endblock %}
+
+{% block content %}
+<div class="max-w-md">
+  <div class="panel-card p-6">
+    <div class="flex items-center gap-3 mb-5 p-3 rounded-lg" style="background:#2a1010; border:1px solid #3a1515;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p class="text-sm" style="color:#f87171;">This will mark KYC as rejected and notify the user.</p>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-5">
+        <label class="form-label">Rejection reason</label>
+        <textarea name="reason" class="form-control" rows="4" required placeholder="Explain why the KYC submission was rejected…">{{ form.reason.value|default:'' }}</textarea>
+        {% for err in form.reason.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+        <a href="{% url 'panel:user_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

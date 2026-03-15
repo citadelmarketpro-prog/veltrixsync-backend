@@ -1,0 +1,25 @@
+{% extends "panel/base.html" %}
+{% block title %}Confirm Delete — SignalSync Admin{% endblock %}
+{% block heading %}Confirm Delete{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="panel-card p-8 text-center">
+    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style="background:#2a1010;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+    </div>
+    <h2 class="text-xl font-bold mb-1" style="color:#f0f0f0;">{{ title }}</h2>
+    {% if subtitle %}<p class="text-sm mb-3" style="color:#B0D45A;">{{ subtitle }}</p>{% endif %}
+    {% if warning %}<p class="text-sm mb-6" style="color:#f87171;">{{ warning }}</p>{% endif %}
+    <div class="flex gap-3 justify-center">
+      <a href="{{ cancel_url }}" class="btn btn-ghost">Cancel</a>
+      <form method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

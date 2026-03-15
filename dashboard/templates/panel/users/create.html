@@ -1,0 +1,61 @@
+{% extends "panel/base.html" %}
+{% block title %}Create User — SignalSync Admin{% endblock %}
+{% block heading %}Create User{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:user_list' %}" style="color:#B0D45A;">Users</a> / Create{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <div class="panel-card p-6">
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        {% for err in form.non_field_errors %}<div class="flash-msg flash-error mb-4">{{ err }}</div>{% endfor %}
+      {% endif %}
+      <div class="grid grid-cols-2 gap-4">
+        <div class="mb-4">
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" class="form-control" />
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" class="form-control" />
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Username *</label>
+        <input type="text" name="username" value="{{ form.username.value|default:'' }}" class="form-control" required />
+        {% for err in form.username.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Email *</label>
+        <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control" required />
+        {% for err in form.email.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Password *</label>
+        <input type="password" name="password" class="form-control" required />
+        {% for err in form.password.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+      </div>
+      <div class="mb-5">
+        <label class="form-label">Confirm Password *</label>
+        <input type="password" name="password2" class="form-control" required />
+        {% for err in form.password2.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+      </div>
+      <div class="flex gap-4 mb-6 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="is_staff" {% if form.is_staff.value %}checked{% endif %} style="accent-color:#B0D45A; width:16px; height:16px;" />
+          <span class="text-sm" style="color:#f0f0f0;">Staff</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="is_superuser" {% if form.is_superuser.value %}checked{% endif %} style="accent-color:#B0D45A; width:16px; height:16px;" />
+          <span class="text-sm" style="color:#f0f0f0;">Superuser</span>
+        </label>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">Create User</button>
+        <a href="{% url 'panel:user_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "panel/base.html" %}
+{% block title %}Wallets — SignalSync Admin{% endblock %}
+{% block heading %}Admin Wallets{% endblock %}
+{% block breadcrumb %}Deposit addresses shown to users{% endblock %}
+{% block header_actions %}<a href="{% url 'panel:wallet_create' %}" class="btn btn-primary text-xs">+ Add Wallet</a>{% endblock %}
+
+{% block content %}
+<div class="panel-card">
+  {% if wallets %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr><th>Currency</th><th>Symbol</th><th>Network</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for w in wallets %}
+    <tr>
+      <td>
+        <div class="flex items-center gap-3">
+          {% if w.icon %}<img src="{{ w.icon.url }}" class="w-7 h-7 rounded-full" />
+          {% else %}<div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style="background:#1e3827; color:#B0D45A;">{{ w.symbol|first }}</div>{% endif %}
+          <span class="font-medium" style="color:#f0f0f0;">{{ w.get_name_display }}</span>
+        </div>
+      </td>
+      <td><span class="badge badge-gray">{{ w.symbol }}</span></td>
+      <td style="color:#8fa896; font-size:13px;">{{ w.network }}</td>
+      <td><code class="text-xs font-mono" style="color:#8fa896;">{{ w.address|truncatechars:28 }}</code></td>
+      <td>{% if w.is_active %}<span class="badge badge-green">Active</span>{% else %}<span class="badge badge-red">Inactive</span>{% endif %}</td>
+      <td>
+        <div class="flex gap-2">
+          <a href="{% url 'panel:wallet_edit' w.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Edit</a>
+          <a href="{% url 'panel:wallet_delete' w.pk %}" class="btn btn-danger" style="padding:4px 10px; font-size:11px;">Delete</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No wallets yet. <a href="{% url 'panel:wallet_create' %}" style="color:#B0D45A;">Add the first one</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
