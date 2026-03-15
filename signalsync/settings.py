@@ -2,6 +2,10 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+import dj_database_url
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -73,12 +77,23 @@ WSGI_APPLICATION = "signalsync.wsgi.application"
 # Database
 # ─────────────────────────────────────────────────────────────────────────────
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
+
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        conn_max_age=600
+    )
 }
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Custom user model
