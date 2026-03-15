@@ -56,8 +56,10 @@ User = get_user_model()
 # Cookie helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-COOKIE_SECURE   = not settings.DEBUG          # True in production (HTTPS)
-COOKIE_SAMESITE = "Lax"
+from decouple import config as _env_config
+
+COOKIE_SECURE   = _env_config("COOKIE_SECURE",   default=not settings.DEBUG, cast=bool)
+COOKIE_SAMESITE = _env_config("COOKIE_SAMESITE", default="Lax")
 ACCESS_MAX_AGE  = 60 * 15                     # 15 minutes
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7           # 7 days
 
