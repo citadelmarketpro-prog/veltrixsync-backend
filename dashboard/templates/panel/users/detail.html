@@ -38,15 +38,15 @@
         </div>
         <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
           <p class="text-xs" style="color:#8fa896;">Profit</p>
-          <p class="text-lg font-bold" style="color:#B0D45A;">${{ obj.profit|floatformat:2|intcomma }}</p>
+          <p class="text-lg font-bold" style="color:#B0D45A;">${{ obj.roi|floatformat:2|intcomma }}</p>
         </div>
         <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
           <p class="text-xs" style="color:#8fa896;">Invested</p>
-          <p class="text-lg font-bold" style="color:#f0f0f0;">${{ obj.invested_value|floatformat:2|intcomma }}</p>
+          <p class="text-lg font-bold" style="color:#f0f0f0;">${{ obj.balance|floatformat:2|intcomma }}</p>
         </div>
         <div class="rounded-lg p-3" style="background:#0d2016; border:1px solid #1e3827;">
           <p class="text-xs" style="color:#8fa896;">ROI</p>
-          <p class="text-lg font-bold" style="color:#f0f0f0;">{{ obj.roi|floatformat:2 }}%</p>
+          <p class="text-lg font-bold" style="color:#f0f0f0;">{{ obj.percentage_roi|floatformat:2 }}%</p>
         </div>
       </div>
 
@@ -89,7 +89,6 @@
       <div class="space-y-2 text-sm">
         <div class="flex justify-between"><span style="color:#8fa896;">Username</span><span style="color:#f0f0f0;">{{ obj.username }}</span></div>
         <div class="flex justify-between"><span style="color:#8fa896;">Joined</span><span style="color:#f0f0f0;">{{ obj.date_joined|date:"M d, Y" }}</span></div>
-        <div class="flex justify-between"><span style="color:#8fa896;">Trading days</span><span style="color:#f0f0f0;">{{ obj.trading_days }}</span></div>
         <div class="flex justify-between"><span style="color:#8fa896;">Staff</span><span>{% if obj.is_staff %}<span class="badge badge-blue">Yes</span>{% else %}<span class="badge badge-gray">No</span>{% endif %}</span></div>
         <div class="flex justify-between"><span style="color:#8fa896;">Active</span><span>{% if obj.is_active %}<span class="badge badge-green">Yes</span>{% else %}<span class="badge badge-red">No</span>{% endif %}</span></div>
       </div>

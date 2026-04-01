@@ -455,17 +455,11 @@ class DashboardStatsView(APIView):
 
         user = request.user
 
-        # Available balance and profit come straight from the user model
-        balance = user.balance or Decimal("0")
-        profit  = user.profit  or Decimal("0")
-        portfolio = balance + profit
+        balance   = user.balance        or Decimal("0")
+        roi       = user.roi            or Decimal("0")   # absolute profit in USD
+        portfolio = balance + roi                          # total shown at top
 
-        # Invested value = cumulative completed deposits
-        invested = Transaction.objects.filter(
-            user=user, tx_type="deposit", status="completed"
-        ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
-
-        # Last-month deposits (completed)
+        # Last-month completed deposits (for the "Compared to $X last month" label)
         now = timezone.now()
         if now.month == 1:
             lm_year, lm_month = now.year - 1, 12
@@ -480,19 +474,12 @@ class DashboardStatsView(APIView):
             created_at__month=lm_month,
         ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
 
-        # Percentage change vs last month's deposits
-        if last_month_deposits > 0:
-            pct_change = float((balance - last_month_deposits) / last_month_deposits * 100)
-        else:
-            pct_change = 0.0
-
         return Response({
             "balance":             float(balance),
-            "profit":              float(profit),
+            "roi":                 float(roi),
             "portfolio":           float(portfolio),
-            "invested_value":      float(invested),
             "last_month_deposits": float(last_month_deposits),
-            "pct_change":          round(pct_change, 2),
+            "pct_change":          float(user.percentage_roi),
         })
 
 
@@ -561,7 +548,7 @@ class WithdrawalView(APIView):
         wallet_address = serializer.validated_data["wallet_address"]
 
         user = request.user
-        available = user.balance if withdraw_from == "balance" else user.profit
+        available = user.balance if withdraw_from == "balance" else user.roi
         available  = available or Decimal("0")
 
         if available < amount_usd:
@@ -575,8 +562,8 @@ class WithdrawalView(APIView):
         if withdraw_from == "balance":
             user.balance = available - amount_usd
         else:
-            user.profit = available - amount_usd
-        user.save(update_fields=["balance" if withdraw_from == "balance" else "profit"])
+            user.roi = available - amount_usd
+        user.save(update_fields=["balance" if withdraw_from == "balance" else "roi"])
 
         tx = Transaction.objects.create(
             user=request.user,
@@ -658,7 +645,27 @@ class CopyTraderView(APIView):
         except Trader.DoesNotExist:
             return Response({"detail": "Trader not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        funds = request.user.balance + request.user.profit
+        # Enforce one-at-a-time rule
+        existing = CopyRelationship.objects.filter(
+            copier=request.user,
+            status__in=["active", "cancel_requested"],
+        ).select_related("trader").first()
+
+        if existing:
+            if existing.status == "cancel_requested":
+                return Response(
+                    {"detail": "Your cancellation request for "
+                               f"{existing.trader.name} is still pending admin approval. "
+                               "Please wait for it to be approved before copying a new trader."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response(
+                {"detail": f"You are already copying {existing.trader.name}. "
+                           "Please cancel that relationship and wait for approval before copying a new trader."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        funds = request.user.balance + request.user.roi
         if funds < trader.min_capital:
             return Response(
                 {"detail": "Insufficient balance to copy this trader."},
@@ -784,34 +791,34 @@ class PortfolioBreakdownView(APIView):
         else:
             growth_pct = 0.0
 
-        # Breakdown by category (exclude categories with 0 trades)
+        # Breakdown by asset_type (stock/crypto/forex)
         cat_rows = (
             CopyTrade.objects
             .filter(user=user)
-            .values("category")
+            .values("asset_type")
             .annotate(total_pnl=Sum("pnl"), count=Count("id"))
             .order_by("-total_pnl")
         )
 
         CATEGORY_META = {
-            "stocks":      {"label": "Stocks",      "legend_color": "#9ab4a2", "base_color": "#8aaa96", "line_color": "#a8c4b0"},
-            "forex":       {"label": "Forex",       "legend_color": "#4a7862", "base_color": "#3d6852", "line_color": "#527c66"},
-            "commodities": {"label": "Commodities", "legend_color": "#133c26", "base_color": "#0e3020", "line_color": "#1a4a30"},
-            "crypto":      {"label": "Crypto",      "legend_color": "#2a5c3a", "base_color": "#1a4a2e", "line_color": "#2a6a40"},
+            "stock":  {"label": "Stocks", "legend_color": "#9ab4a2", "base_color": "#8aaa96", "line_color": "#a8c4b0"},
+            "forex":  {"label": "Forex",  "legend_color": "#4a7862", "base_color": "#3d6852", "line_color": "#527c66"},
+            "crypto": {"label": "Crypto", "legend_color": "#2a5c3a", "base_color": "#1a4a2e", "line_color": "#2a6a40"},
         }
 
         total_abs = sum(abs(float(r["total_pnl"] or 0)) for r in cat_rows)
 
         breakdown = []
         for row in cat_rows:
-            pnl_val = float(row["total_pnl"] or 0)
-            pct     = round(abs(pnl_val) / total_abs * 100, 1) if total_abs > 0 else 0
-            meta    = CATEGORY_META.get(row["category"], {
-                "label": row["category"].title(), "legend_color": "#6a8a7a",
+            pnl_val  = float(row["total_pnl"] or 0)
+            pct      = round(abs(pnl_val) / total_abs * 100, 1) if total_abs > 0 else 0
+            asset_type = row["asset_type"]
+            meta     = CATEGORY_META.get(asset_type, {
+                "label": asset_type.title(), "legend_color": "#6a8a7a",
                 "base_color": "#4a6a5a", "line_color": "#6a8a7a",
             })
             breakdown.append({
-                "category":     row["category"],
+                "category":     asset_type,
                 "label":        meta["label"],
                 "legend_color": meta["legend_color"],
                 "base_color":   meta["base_color"],

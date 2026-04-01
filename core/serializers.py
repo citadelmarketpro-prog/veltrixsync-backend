@@ -57,12 +57,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id", "username", "email", "first_name", "last_name",
             "avatar_url", "bio",
-            "balance", "invested_value", "profit", "roi",
+            "balance", "roi", "percentage_roi",
             "kyc_status",
             "date_joined",
         ]
         read_only_fields = [
-            "id", "email", "balance", "invested_value", "profit", "roi",
+            "id", "email", "balance", "roi", "percentage_roi",
             "kyc_status", "date_joined",
         ]
 
@@ -463,7 +463,7 @@ class DepositSerializer(serializers.Serializer):
 
 
 class WithdrawalSerializer(serializers.Serializer):
-    WITHDRAW_FROM_CHOICES = ["balance", "profit"]
+    WITHDRAW_FROM_CHOICES = ["balance", "roi"]
 
     wallet_id      = serializers.IntegerField()
     amount_usd     = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
@@ -481,18 +481,21 @@ class WithdrawalSerializer(serializers.Serializer):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CopyTradeSerializer(serializers.ModelSerializer):
-    trader_name  = serializers.CharField(source="trader.name", read_only=True)
-    trader_id    = serializers.IntegerField(source="trader.id", read_only=True)
+    trader_name  = serializers.SerializerMethodField()
     pnl_positive = serializers.SerializerMethodField()
     pnl_display  = serializers.SerializerMethodField()
 
     class Meta:
         model  = CopyTrade
         fields = [
-            "id", "trader_id", "trader_name", "asset", "trade_type",
-            "direction", "price", "pnl", "pnl_display", "pnl_positive",
-            "status", "created_at",
+            "id", "trader_name", "asset", "asset_type",
+            "direction", "entry", "earning_pct",
+            "pnl", "pnl_display", "pnl_positive",
+            "duration", "status", "created_at",
         ]
+
+    def get_trader_name(self, obj):
+        return obj.trader.name if obj.trader else ""
 
     def get_pnl_positive(self, obj):
         return obj.pnl >= 0

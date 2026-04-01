@@ -13,7 +13,7 @@
     </div>
     <div class="stat-card text-center">
       <p class="text-xs mb-1" style="color:#8fa896;">Current Profit</p>
-      <p class="text-base font-bold truncate" title="${{ obj.profit|floatformat:2 }}" style="color:#B0D45A;">${{ obj.profit|floatformat:2 }}</p>
+      <p class="text-base font-bold truncate" title="${{ obj.roi|floatformat:2 }}" style="color:#B0D45A;">${{ obj.roi|floatformat:2 }}</p>
     </div>
   </div>
 
@@ -25,7 +25,7 @@
         <label class="form-label">Field to adjust</label>
         <select name="field" class="form-control">
           <option value="balance">Main Balance</option>
-          <option value="profit">Profit</option>
+          <option value="roi">Profit (ROI)</option>
         </select>
       </div>
       <div class="mb-5">

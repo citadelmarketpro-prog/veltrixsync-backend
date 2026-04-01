@@ -2,10 +2,11 @@ from django.contrib import admin
 from .models import (
     AdminWallet, CopyRelationship, Notification, PortfolioAllocation,
     TradeHistory, Trader, TraderAsset, TraderPosition, TraderSection,
-    TraderTag, Transaction, User,
+    TraderTag, Transaction, User, CopyTrade,
 )
 
 admin.site.register(User)
+admin.site.register(CopyTrade)
 
 
 # ── Trader inline helpers ──────────────────────────────────────────────────────

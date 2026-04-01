@@ -19,9 +19,8 @@ class User(AbstractUser):
 
     # Financials (stored in USD)
     balance        = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    invested_value = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    profit         = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    roi            = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    roi            = models.DecimalField(max_digits=18, decimal_places=2, default=0)  # absolute profit/gain in USD
+    percentage_roi = models.DecimalField(max_digits=8,  decimal_places=2, default=0)  # cumulative % across all trades
 
     # ── KYC — Personal ───────────────────────────────────────────────────────
     title         = models.CharField(max_length=10,  blank=True, default="")
@@ -323,33 +322,47 @@ class CopyRelationship(models.Model):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CopyTrade(models.Model):
-    TRADE_TYPE_CHOICES = [("Market", "Market"), ("Limit", "Limit")]
-    DIRECTION_CHOICES  = [("Long", "Long"), ("Short", "Short")]
-    STATUS_CHOICES     = [("open", "Open"), ("closed", "Closed"), ("pending", "Pending")]
-    CATEGORY_CHOICES   = [
-        ("stocks",      "Stocks"),
-        ("forex",       "Forex"),
-        ("commodities", "Commodities"),
-        ("crypto",      "Crypto"),
+    DIRECTION_CHOICES = [("Buy", "Buy"), ("Sell", "Sell")]
+    STATUS_CHOICES    = [("open", "Open"), ("closed", "Closed"), ("pending", "Pending")]
+    TYPE_CHOICES      = [
+        ("stock",  "Stock"),
+        ("crypto", "Crypto"),
+        ("forex",  "Forex"),
+    ]
+    DURATION_CHOICES  = [
+        ("2m",  "2 Minutes"),
+        ("5m",  "5 Minutes"),
+        ("10m", "10 Minutes"),
+        ("15m", "15 Minutes"),
+        ("30m", "30 Minutes"),
+        ("1h",  "1 Hour"),
+        ("2h",  "2 Hours"),
+        ("4h",  "4 Hours"),
+        ("6h",  "6 Hours"),
+        ("12h", "12 Hours"),
+        ("1d",  "1 Day"),
+        ("3d",  "3 Days"),
+        ("1w",  "1 Week"),
     ]
 
     copy_relationship = models.ForeignKey("CopyRelationship", on_delete=models.SET_NULL, null=True, blank=True, related_name="trades")
     user              = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="copy_trades")
     trader            = models.ForeignKey("Trader", on_delete=models.SET_NULL, null=True, blank=True, related_name="investor_trades")
     asset             = models.CharField(max_length=100)
-    trade_type        = models.CharField(max_length=20, choices=TRADE_TYPE_CHOICES, default="Market")
-    direction         = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default="Long")
-    price             = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    pnl               = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    asset_type        = models.CharField(max_length=10, choices=TYPE_CHOICES, default="stock")
+    direction         = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default="Buy")
+    entry             = models.DecimalField(max_digits=18, decimal_places=2, default=0)   # entry price
+    earning_pct       = models.DecimalField(max_digits=8,  decimal_places=2, default=0)   # % entered by admin
+    pnl               = models.DecimalField(max_digits=18, decimal_places=2, default=0)   # calculated USD value
+    duration          = models.CharField(max_length=10, choices=DURATION_CHOICES, default="1h")
     status            = models.CharField(max_length=20, choices=STATUS_CHOICES, default="open")
-    category          = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="stocks")
     created_at        = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.user.email} | {self.trader} | {self.asset} {self.direction}"
+        return f"{self.user.email} | {self.asset} {self.direction} {self.earning_pct}%"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

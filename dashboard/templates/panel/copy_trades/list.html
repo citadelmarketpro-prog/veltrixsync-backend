@@ -125,7 +125,7 @@
             <button type="submit" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Keep Active</button>
           </form>
           {% elif rel.status == "active" %}
-          <a href="{% url 'panel:investor_add_trade' rel.pk %}" class="btn btn-primary" style="padding:4px 10px; font-size:11px;">+ Add Trade</a>
+          <a href="{% url 'panel:investor_add_trade' rel.copier.pk %}" class="btn btn-primary" style="padding:4px 10px; font-size:11px;">+ Add Trade</a>
           {% endif %}
         </div>
       </td>

@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from core.models import (
@@ -14,15 +15,17 @@ from core.models import (
 )
 from .decorators import superuser_required
 from .forms import (
-    AdminWalletForm, AdjustFundsForm, BulkCopyTradeForm, CopyTradeForm, PortfolioAllocationForm,
+    AddTradeForm, AdminWalletForm, AdjustFundsForm, PortfolioAllocationForm,
     RejectKycForm, TraderAssetForm, TradeHistoryForm, TraderForm, TraderPositionForm,
     TraderSectionForm, TraderTagForm, UserCreateForm, UserEditForm,
+    ASSET_MAP,
 )
 
 User = get_user_model()
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
 def panel_login(request):
     if request.user.is_authenticated and request.user.is_superuser:
         return redirect("panel:dashboard")
@@ -54,7 +57,7 @@ def dashboard_home(request):
         "completed_deposits":    Transaction.objects.filter(tx_type="deposit",    status="completed").aggregate(s=Sum("amount_usd"))["s"] or 0,
         "completed_withdrawals": Transaction.objects.filter(tx_type="withdrawal", status="completed").aggregate(s=Sum("amount_usd"))["s"] or 0,
         "total_balance":         User.objects.aggregate(s=Sum("balance"))["s"] or 0,
-        "total_profit":          User.objects.aggregate(s=Sum("profit"))["s"] or 0,
+        "total_profit":          User.objects.aggregate(s=Sum("roi"))["s"] or 0,
         "recent_tx":             Transaction.objects.select_related("user").order_by("-created_at")[:8],
         "recent_users":          User.objects.order_by("-date_joined")[:8],
     })
@@ -85,10 +88,11 @@ def user_create(request):
 @superuser_required
 def user_detail(request, pk):
     obj = get_object_or_404(User, pk=pk)
+    copies = CopyRelationship.objects.filter(copier=obj).select_related("trader")
     return render(request, "panel/users/detail.html", {
         "obj": obj,
         "transactions": Transaction.objects.filter(user=obj).order_by("-created_at")[:10],
-        "copies": CopyRelationship.objects.filter(copier=obj).select_related("trader"),
+        "copies": copies,
     })
 
 
@@ -564,51 +568,69 @@ def investor_list(request):
     return render(request, "panel/investors/list.html", {"page_obj": page, "q": q})
 
 
+def _apply_trade(user, cd):
+    """Create a CopyTrade and update the user's roi/percentage_roi."""
+    balance     = user.balance or Decimal("0")
+    earning_pct = cd["earning_pct"]
+    pnl_amount  = (balance * earning_pct / Decimal("100")).quantize(Decimal("0.01"))
+
+    user.roi            = (user.roi            or Decimal("0")) + pnl_amount
+    user.percentage_roi = (user.percentage_roi or Decimal("0")) + earning_pct
+    user.save(update_fields=["roi", "percentage_roi"])
+
+    return CopyTrade.objects.create(
+        user        = user,
+        asset       = cd["asset"],
+        asset_type  = cd["asset_type"],
+        direction   = cd["direction"],
+        entry       = cd["entry"],
+        earning_pct = earning_pct,
+        pnl         = pnl_amount,
+        duration    = cd["duration"],
+        status      = cd["status"],
+    )
+
+
 @superuser_required
 def investor_add_trade(request, user_pk):
     """Add a CopyTrade for a specific user."""
+    import json
     user = get_object_or_404(User, pk=user_pk)
-    form = CopyTradeForm(request.POST or None)
+    form = AddTradeForm(request.POST or None)
     if form.is_valid():
-        trade = form.save(commit=False)
-        trade.user = user
-        trade.save()
+        trade = _apply_trade(user, form.cleaned_data)
         Notification.objects.create(
             user=user, notif_type="trade", title="New Trade",
-            body=f"A new {trade.direction} {trade.trade_type} trade on {trade.asset} has been added to your copy portfolio.",
+            body=f"A new {trade.direction} trade on {trade.asset} has been added to your copy portfolio.",
         )
         messages.success(request, f"Trade added for {user.email}.")
         return redirect("panel:investor_list")
-    return render(request, "panel/investors/add_trade.html", {"form": form, "inv_user": user})
+    return render(request, "panel/investors/add_trade.html", {
+        "form": form,
+        "inv_user": user,
+        "asset_map_json": json.dumps(ASSET_MAP),
+    })
 
 
 @superuser_required
 def investor_bulk_add_trade(request):
     """Bulk add a trade to multiple selected users."""
+    import json
     user_ids = request.POST.getlist("user_ids") or request.GET.getlist("user_ids")
-    users = User.objects.filter(pk__in=user_ids) if user_ids else User.objects.none()
+    users    = User.objects.filter(pk__in=user_ids) if user_ids else User.objects.none()
 
     if not user_ids:
         messages.error(request, "No investors selected.")
         return redirect("panel:investor_list")
 
-    form = BulkCopyTradeForm(request.POST if request.method == "POST" and "asset" in request.POST else None)
+    form = AddTradeForm(request.POST if request.method == "POST" and "asset_type" in request.POST else None)
     if form.is_valid():
         count = 0
         for user in users:
-            CopyTrade.objects.create(
-                user=user,
-                asset=form.cleaned_data["asset"],
-                trade_type=form.cleaned_data["trade_type"],
-                direction=form.cleaned_data["direction"],
-                price=form.cleaned_data["price"],
-                pnl=form.cleaned_data["pnl"],
-                status=form.cleaned_data["status"],
-                category=form.cleaned_data["category"],
-            )
+            trade = _apply_trade(user, form.cleaned_data)
             Notification.objects.create(
                 user=user, notif_type="trade", title="New Trade",
-                body=f"A new {form.cleaned_data['direction']} {form.cleaned_data['trade_type']} trade on {form.cleaned_data['asset']} has been added to your copy portfolio.",
+                body=f"A new {trade.direction} trade on {trade.asset} has been added to your copy portfolio.",
             )
             count += 1
         messages.success(request, f"Trade added to {count} investor(s).")
@@ -618,6 +640,7 @@ def investor_bulk_add_trade(request):
         "form": form,
         "users": users,
         "user_ids": user_ids,
+        "asset_map_json": json.dumps(ASSET_MAP),
     })
 
 

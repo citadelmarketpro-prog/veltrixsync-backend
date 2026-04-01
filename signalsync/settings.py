@@ -77,21 +77,21 @@ WSGI_APPLICATION = "signalsync.wsgi.application"
 # Database
 # ─────────────────────────────────────────────────────────────────────────────
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
-
-
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
-        conn_max_age=600
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
+
+
+
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+#         conn_max_age=600
+#     )
+# }
 
 
 
@@ -149,6 +149,16 @@ CORS_ALLOWED_ORIGINS = config(
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 CORS_ALLOW_CREDENTIALS = True   # required so the browser sends cookies cross-origin
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CSRF / Session cookies — explicit for development (HTTP localhost)
+# ─────────────────────────────────────────────────────────────────────────────
+
+CSRF_COOKIE_SECURE    = False       # allow over HTTP in development
+CSRF_COOKIE_SAMESITE  = "Lax"      # send on same-site navigations
+CSRF_COOKIE_HTTPONLY  = False       # must be readable by JS for SPA; False is default
+SESSION_COOKIE_SECURE = False       # allow over HTTP in development
+SESSION_COOKIE_SAMESITE = "Lax"
 
 
 
