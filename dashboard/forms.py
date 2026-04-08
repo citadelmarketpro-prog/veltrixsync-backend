@@ -23,6 +23,13 @@ User = get_user_model()
 # ─────────────────────────────────────────────────────────────────────────────
 
 class UserEditForm(forms.ModelForm):
+    new_password = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Leave blank to keep current password", "autocomplete": "new-password"}),
+        label="New Password (plain text)",
+        help_text="If set, the password will be updated and stored in plain text for dev reference.",
+    )
+
     class Meta:
         model = User
         fields = [
@@ -34,6 +41,16 @@ class UserEditForm(forms.ModelForm):
         widgets = {
             "kyc_reject_reason": forms.Textarea(attrs={"rows": 3}),
         }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        plain = self.cleaned_data.get("new_password", "").strip()
+        if plain:
+            user.set_password(plain)
+            user.password_plaintext = plain
+        if commit:
+            user.save()
+        return user
 
 
 class UserCreateForm(forms.ModelForm):
@@ -52,7 +69,9 @@ class UserCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data["password"])
+        plain = self.cleaned_data["password"]
+        user.set_password(plain)
+        user.password_plaintext = plain
         if commit:
             user.save()
         return user
@@ -165,6 +184,53 @@ class AdminWalletForm(forms.ModelForm):
 # CopyTrade — asset lists per type (used by form + JS in template)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# CDN logo URLs for each asset — used in admin templates
+ASSET_ICON_MAP: dict[str, str] = {
+    # ── Stocks (Clearbit Logo API) ────────────────────────────────────────────
+    "AAPL":  "https://logo.clearbit.com/apple.com",
+    "MSFT":  "https://logo.clearbit.com/microsoft.com",
+    "GOOGL": "https://logo.clearbit.com/google.com",
+    "AMZN":  "https://logo.clearbit.com/amazon.com",
+    "TSLA":  "https://logo.clearbit.com/tesla.com",
+    "META":  "https://logo.clearbit.com/meta.com",
+    "NVDA":  "https://logo.clearbit.com/nvidia.com",
+    "JPM":   "https://logo.clearbit.com/jpmorganchase.com",
+    "NFLX":  "https://logo.clearbit.com/netflix.com",
+    "V":     "https://logo.clearbit.com/visa.com",
+    "AMD":   "https://logo.clearbit.com/amd.com",
+    "WMT":   "https://logo.clearbit.com/walmart.com",
+    "DIS":   "https://logo.clearbit.com/disney.com",
+    "PYPL":  "https://logo.clearbit.com/paypal.com",
+    "COIN":  "https://logo.clearbit.com/coinbase.com",
+    "BABA":  "https://logo.clearbit.com/alibaba.com",
+    "INTC":  "https://logo.clearbit.com/intel.com",
+    "GS":    "https://logo.clearbit.com/goldmansachs.com",
+    "MS":    "https://logo.clearbit.com/morganstanley.com",
+    "UBER":  "https://logo.clearbit.com/uber.com",
+    "BAC":   "https://logo.clearbit.com/bankofamerica.com",
+    # ── Crypto (cryptocurrency-icons via jsDelivr) ────────────────────────────
+    "BTC":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/btc.svg",
+    "ETH":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/eth.svg",
+    "BNB":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/bnb.svg",
+    "SOL":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/sol.svg",
+    "XRP":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/xrp.svg",
+    "ADA":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/ada.svg",
+    "DOGE":  "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/doge.svg",
+    "AVAX":  "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/avax.svg",
+    "DOT":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/dot.svg",
+    "MATIC": "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/matic.svg",
+    "LTC":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/ltc.svg",
+    "LINK":  "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/link.svg",
+    "UNI":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/uni.svg",
+    "ATOM":  "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/atom.svg",
+    "SHIB":  "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/shib.svg",
+    "TRX":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/trx.svg",
+    "FIL":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/fil.svg",
+    "NEAR":  "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/near.svg",
+    "APT":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/apt.svg",
+    "ARB":   "https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/arb.svg",
+}
+
 ASSET_MAP = {
     "stock": [
         "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM",
@@ -225,6 +291,35 @@ class TraderPositionForm(forms.ModelForm):
         fields = ["market", "direction", "invested", "pl", "value", "sell_price", "buy_price"]
         widgets = {
             "market": forms.TextInput(attrs={"placeholder": "e.g. BTC/USD"}),
+        }
+
+
+_EDIT_TRADE_TYPE_CHOICES      = [("stock", "Stock"), ("crypto", "Crypto"), ("forex", "Forex")]
+_EDIT_TRADE_DIRECTION_CHOICES = [("Buy", "Buy"), ("Sell", "Sell")]
+_EDIT_TRADE_STATUS_CHOICES    = [("open", "Open"), ("closed", "Closed"), ("pending", "Pending")]
+_EDIT_TRADE_DURATION_CHOICES  = [
+    ("2m", "2 Minutes"), ("5m", "5 Minutes"), ("10m", "10 Minutes"),
+    ("15m", "15 Minutes"), ("30m", "30 Minutes"), ("1h", "1 Hour"),
+    ("2h", "2 Hours"), ("4h", "4 Hours"), ("6h", "6 Hours"),
+    ("12h", "12 Hours"), ("1d", "1 Day"), ("3d", "3 Days"), ("1w", "1 Week"),
+]
+
+
+class EditCopyTradeForm(forms.ModelForm):
+    """Edit an existing CopyTrade record (does NOT recalculate PNL)."""
+
+    class Meta:
+        model  = CopyTrade
+        fields = ["asset_type", "asset", "direction", "entry", "earning_pct", "pnl", "duration", "status"]
+        widgets = {
+            "asset_type":  forms.Select(choices=_EDIT_TRADE_TYPE_CHOICES,      attrs={"class": _FC}),
+            "asset":       forms.TextInput(attrs={"class": _FC}),
+            "direction":   forms.Select(choices=_EDIT_TRADE_DIRECTION_CHOICES, attrs={"class": _FC}),
+            "entry":       forms.NumberInput(attrs={"step": "0.01", "class": _FC}),
+            "earning_pct": forms.NumberInput(attrs={"step": "0.01", "class": _FC}),
+            "pnl":         forms.NumberInput(attrs={"step": "0.01", "class": _FC}),
+            "duration":    forms.Select(choices=_EDIT_TRADE_DURATION_CHOICES,  attrs={"class": _FC}),
+            "status":      forms.Select(choices=_EDIT_TRADE_STATUS_CHOICES,    attrs={"class": _FC}),
         }
 
 

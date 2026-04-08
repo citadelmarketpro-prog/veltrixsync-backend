@@ -68,6 +68,11 @@ urlpatterns = [
 
     # Investors
     path("investors/",                               views.investor_list,           name="investor_list"),
+    path("investors/trades/",                        views.all_trade_records,       name="all_trade_records"),
     path("investors/<int:user_pk>/add-trade/",       views.investor_add_trade,      name="investor_add_trade"),
     path("investors/bulk-add-trade/",                views.investor_bulk_add_trade, name="investor_bulk_add_trade"),
+
+    # Individual copy trade records
+    path("investors/trades/<int:pk>/edit/",   views.copy_trade_record_edit,   name="copy_trade_record_edit"),
+    path("investors/trades/<int:pk>/delete/", views.copy_trade_record_delete, name="copy_trade_record_delete"),
 ]

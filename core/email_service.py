@@ -340,7 +340,7 @@ def _base_styles() -> str:
 def _header_html() -> str:
     return """
     <div class="header">
-        <div class="header-logo">Signal<span>Sync</span></div>
+        <div class="header-logo">Veltrix<span>Sync</span></div>
         <div class="header-tagline">Copy Trading Platform</div>
         <div class="header-divider"></div>
     </div>

@@ -63,6 +63,15 @@
         <textarea name="kyc_reject_reason" class="form-control" rows="2" placeholder="Only if status is rejected…">{{ form.kyc_reject_reason.value|default:'' }}</textarea>
       </div>
 
+      <!-- Dev: plain-text password -->
+      <div class="mb-5 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+        <label class="form-label" style="color:#B0D45A;">New Password <span style="font-weight:400; color:#8fa896; font-size:11px;">(dev only — stored in plain text)</span></label>
+        <input type="text" name="new_password" value="" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep current password" />
+        {% if obj.password_plaintext %}
+          <p class="text-xs mt-2" style="color:#8fa896;">Current stored: <span style="color:#f0f0f0; font-family:monospace;">{{ obj.password_plaintext }}</span></p>
+        {% endif %}
+      </div>
+
       <!-- Checkboxes -->
       <div class="grid grid-cols-3 gap-4 mb-6 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
         <label class="flex items-center gap-2 cursor-pointer">

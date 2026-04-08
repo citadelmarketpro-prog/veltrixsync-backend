@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 
 from django.contrib import messages
@@ -15,10 +16,11 @@ from core.models import (
 )
 from .decorators import superuser_required
 from .forms import (
-    AddTradeForm, AdminWalletForm, AdjustFundsForm, PortfolioAllocationForm,
-    RejectKycForm, TraderAssetForm, TradeHistoryForm, TraderForm, TraderPositionForm,
-    TraderSectionForm, TraderTagForm, UserCreateForm, UserEditForm,
-    ASSET_MAP,
+    AddTradeForm, AdminWalletForm, AdjustFundsForm, EditCopyTradeForm,
+    PortfolioAllocationForm, RejectKycForm, TraderAssetForm, TradeHistoryForm,
+    TraderForm, TraderPositionForm, TraderSectionForm, TraderTagForm,
+    UserCreateForm, UserEditForm,
+    ASSET_MAP, ASSET_ICON_MAP,
 )
 
 User = get_user_model()
@@ -594,9 +596,9 @@ def _apply_trade(user, cd):
 @superuser_required
 def investor_add_trade(request, user_pk):
     """Add a CopyTrade for a specific user."""
-    import json
-    user = get_object_or_404(User, pk=user_pk)
-    form = AddTradeForm(request.POST or None)
+    user   = get_object_or_404(User, pk=user_pk)
+    form   = AddTradeForm(request.POST or None)
+    trades = CopyTrade.objects.filter(user=user).select_related("trader").order_by("-created_at")
     if form.is_valid():
         trade = _apply_trade(user, form.cleaned_data)
         Notification.objects.create(
@@ -604,24 +606,27 @@ def investor_add_trade(request, user_pk):
             body=f"A new {trade.direction} trade on {trade.asset} has been added to your copy portfolio.",
         )
         messages.success(request, f"Trade added for {user.email}.")
-        return redirect("panel:investor_list")
+        return redirect("panel:investor_add_trade", user_pk=user_pk)
     return render(request, "panel/investors/add_trade.html", {
         "form": form,
         "inv_user": user,
-        "asset_map_json": json.dumps(ASSET_MAP),
+        "trades": trades,
+        "asset_map_json":  json.dumps(ASSET_MAP),
+        "asset_icon_map":  ASSET_ICON_MAP,
     })
 
 
 @superuser_required
 def investor_bulk_add_trade(request):
     """Bulk add a trade to multiple selected users."""
-    import json
     user_ids = request.POST.getlist("user_ids") or request.GET.getlist("user_ids")
     users    = User.objects.filter(pk__in=user_ids) if user_ids else User.objects.none()
 
     if not user_ids:
         messages.error(request, "No investors selected.")
         return redirect("panel:investor_list")
+
+    all_trades = CopyTrade.objects.select_related("user", "trader").order_by("-created_at")
 
     form = AddTradeForm(request.POST if request.method == "POST" and "asset_type" in request.POST else None)
     if form.is_valid():
@@ -634,14 +639,75 @@ def investor_bulk_add_trade(request):
             )
             count += 1
         messages.success(request, f"Trade added to {count} investor(s).")
-        return redirect("panel:investor_list")
+        return redirect(request.get_full_path())
 
     return render(request, "panel/investors/bulk_add_trade.html", {
         "form": form,
         "users": users,
         "user_ids": user_ids,
+        "all_trades": all_trades,
+        "asset_map_json": json.dumps(ASSET_MAP),
+        "asset_icon_map": ASSET_ICON_MAP,
+    })
+
+
+@superuser_required
+def all_trade_records(request):
+    """List all injected CopyTrade records across all users."""
+    qs = CopyTrade.objects.select_related("user", "trader").order_by("-created_at")
+
+    q  = request.GET.get("q",      "").strip()
+    sf = request.GET.get("status", "").strip()
+    tf = request.GET.get("type",   "").strip()
+
+    if q:  qs = qs.filter(Q(user__email__icontains=q) | Q(asset__icontains=q))
+    if sf: qs = qs.filter(status=sf)
+    if tf: qs = qs.filter(asset_type=tf)
+
+    page = Paginator(qs, 30).get_page(request.GET.get("page"))
+    return render(request, "panel/investors/all_trades.html", {
+        "page_obj":      page,
+        "q":             q,
+        "status_f":      sf,
+        "type_f":        tf,
+        "asset_icon_map": ASSET_ICON_MAP,
+        "status_choices": CopyTrade.STATUS_CHOICES,
+        "type_choices":   CopyTrade.TYPE_CHOICES,
+    })
+
+
+@superuser_required
+def copy_trade_record_edit(request, pk):
+    """Edit an individual CopyTrade record."""
+    trade = get_object_or_404(CopyTrade, pk=pk)
+    form  = EditCopyTradeForm(request.POST or None, instance=trade)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"Trade #{trade.pk} updated.")
+        # Return to the page we came from (add_trade for single, bulk for all)
+        referer = request.META.get("HTTP_REFERER", "")
+        if "bulk" in referer:
+            return redirect(referer)
+        return redirect("panel:investor_add_trade", user_pk=trade.user_id)
+    return render(request, "panel/investors/edit_trade.html", {
+        "form":  form,
+        "trade": trade,
         "asset_map_json": json.dumps(ASSET_MAP),
     })
+
+
+@superuser_required
+@require_POST
+def copy_trade_record_delete(request, pk):
+    """Delete an individual CopyTrade record."""
+    trade   = get_object_or_404(CopyTrade, pk=pk)
+    user_pk = trade.user_id
+    referer = request.META.get("HTTP_REFERER", "")
+    trade.delete()
+    messages.success(request, f"Trade #{pk} deleted.")
+    if "bulk" in referer:
+        return redirect(referer)
+    return redirect("panel:investor_add_trade", user_pk=user_pk)
 
 
 # ── Tags ──────────────────────────────────────────────────────────────────────

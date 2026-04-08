@@ -1,0 +1,109 @@
+{% extends "panel/base.html" %}
+{% block title %}Edit Trade #{{ trade.pk }} — VeltrixSync Admin{% endblock %}
+{% block heading %}Edit Trade{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'panel:investor_list' %}" style="color:#B0D45A;">Investors</a> /
+  <a href="{% url 'panel:investor_add_trade' trade.user.pk %}" style="color:#B0D45A;">{{ trade.user.email }}</a> /
+  Edit Trade #{{ trade.pk }}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+
+  <!-- Trade context -->
+  <div class="panel-card mb-6 px-5 py-4">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style="background:#1e3827;color:#B0D45A;">
+        {{ trade.user.email|first|upper }}
+      </div>
+      <div>
+        <p class="font-semibold" style="color:#f0f0f0;">{{ trade.user.email }}</p>
+        <p class="text-xs" style="color:#8fa896;">
+          Trade #{{ trade.pk }} &nbsp;·&nbsp; Created {{ trade.created_at|date:"M d, Y H:i" }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit form -->
+  <div class="panel-card px-6 py-6">
+    <h2 class="text-base font-semibold mb-5" style="color:#f0f0f0;">Trade Details</h2>
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 px-4 py-3 text-sm" style="background:#2a0808;border:1px solid #7f1d1d;color:#f87171;border-radius:4px;">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-2 gap-4">
+
+        <!-- Asset Type -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Type</label>
+          {{ form.asset_type }}
+          {% if form.asset_type.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.asset_type.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Asset -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Asset</label>
+          {{ form.asset }}
+          {% if form.asset.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.asset.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Direction -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Direction</label>
+          {{ form.direction }}
+          {% if form.direction.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.direction.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Duration -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Duration</label>
+          {{ form.duration }}
+          {% if form.duration.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.duration.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Entry Price -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Entry Price (USD)</label>
+          {{ form.entry }}
+          {% if form.entry.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.entry.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Earning % -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Earning %</label>
+          {{ form.earning_pct }}
+          {% if form.earning_pct.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.earning_pct.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- PNL -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">PNL (USD)</label>
+          {{ form.pnl }}
+          <p class="text-xs mt-1" style="color:#5a7060;">Direct override — does not auto-recalculate.</p>
+          {% if form.pnl.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.pnl.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Status -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Status</label>
+          {{ form.status }}
+          {% if form.status.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.status.errors.0 }}</p>{% endif %}
+        </div>
+
+      </div>
+
+      <div class="flex gap-3 mt-2">
+        <button type="submit" class="btn btn-primary flex-1">Save Changes</button>
+        <a href="{% url 'panel:investor_add_trade' trade.user.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

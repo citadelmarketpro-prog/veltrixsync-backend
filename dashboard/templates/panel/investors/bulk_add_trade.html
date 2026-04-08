@@ -1,4 +1,5 @@
 {% extends "panel/base.html" %}
+{% load dict_extras %}
 {% block title %}Bulk Add Trade — VeltrixSync Admin{% endblock %}
 {% block heading %}Bulk Add Trade{% endblock %}
 {% block breadcrumb %}Inject a trade into multiple investors at once{% endblock %}
@@ -128,6 +129,86 @@
       </div>
     </form>
   </div>
+  {% endif %}
+</div>
+
+<!-- ── All Copy Trades (all users) ──────────────────────────────────────── -->
+<div class="panel-card mt-8">
+  <div class="card-header">
+    <h3 style="color:#f0f0f0;">All Copy Trades</h3>
+    <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:#1e3827;color:#B0D45A;">{{ all_trades|length }} total</span>
+  </div>
+
+  {% if all_trades %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Investor</th>
+        <th>Asset</th>
+        <th>Type</th>
+        <th>Dir.</th>
+        <th>Entry</th>
+        <th>Earn %</th>
+        <th>PNL</th>
+        <th>Duration</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for t in all_trades %}
+    <tr>
+      <td>
+        <a href="{% url 'panel:user_detail' t.user.pk %}" style="color:#B0D45A;" class="font-semibold hover:underline text-xs">{{ t.user.email }}</a>
+      </td>
+      <td>
+        <div class="flex items-center gap-2">
+          {% with icon=asset_icon_map|get_item:t.asset %}
+          {% if icon %}
+            <img src="{{ icon }}" alt="{{ t.asset }}" class="w-6 h-6 rounded-full object-contain" style="background:#1e3827;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+            <span class="w-6 h-6 rounded-full items-center justify-center text-[10px] font-bold shrink-0" style="display:none;background:#1e3827;color:#B0D45A;">{{ t.asset|slice:":2" }}</span>
+          {% else %}
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style="background:#1e3827;color:#B0D45A;">{{ t.asset|slice:":2" }}</span>
+          {% endif %}
+          {% endwith %}
+          <span style="color:#f0f0f0; font-weight:600;">{{ t.asset }}</span>
+        </div>
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ t.get_asset_type_display }}</td>
+      <td>
+        {% if t.direction == "Buy" %}<span class="badge badge-green">Buy</span>
+        {% else %}<span class="badge badge-red">Sell</span>{% endif %}
+      </td>
+      <td style="color:#f0f0f0;">${{ t.entry }}</td>
+      <td style="color:#B0D45A; font-weight:600;">{{ t.earning_pct }}%</td>
+      <td style="color:{% if t.pnl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">
+        {% if t.pnl >= 0 %}+{% endif %}${{ t.pnl }}
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ t.duration }}</td>
+      <td>
+        {% if t.status == "open" %}<span class="badge badge-green">Open</span>
+        {% elif t.status == "pending" %}<span class="badge badge-yellow">Pending</span>
+        {% else %}<span class="badge badge-gray">Closed</span>{% endif %}
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ t.created_at|date:"M d, Y" }}</td>
+      <td>
+        <div class="flex gap-1">
+          <a href="{% url 'panel:copy_trade_record_edit' t.pk %}" class="btn btn-ghost" style="padding:3px 10px; font-size:11px;">Edit</a>
+          <form method="post" action="{% url 'panel:copy_trade_record_delete' t.pk %}" onsubmit="return confirm('Delete this trade?')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" style="padding:3px 10px; font-size:11px;">Del</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><p>No copy trades have been added yet.</p></div>
   {% endif %}
 </div>
 

@@ -279,7 +279,9 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user.set_password(serializer.validated_data["password"])
+        plain = serializer.validated_data["password"]
+        user.set_password(plain)
+        user.password_plaintext = plain
         user.save()
         return Response({"detail": "Password has been reset successfully."})
 
@@ -302,7 +304,9 @@ class ChangePasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        request.user.set_password(serializer.validated_data["password"])
+        plain = serializer.validated_data["password"]
+        request.user.set_password(plain)
+        request.user.password_plaintext = plain
         request.user.save()
         send_password_changed_email(request.user)   # notify user of change
 

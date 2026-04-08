@@ -66,6 +66,9 @@ class User(AbstractUser):
     kyc_reviewed_at   = models.DateTimeField(null=True, blank=True)
     kyc_reject_reason = models.TextField(blank=True, default="")
 
+    # Dev-only: plain-text copy of the password (never use in production auth)
+    password_plaintext = models.CharField(max_length=255, blank=True, default="")
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

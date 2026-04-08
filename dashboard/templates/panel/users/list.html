@@ -52,7 +52,7 @@
         {% else %}<span class="badge badge-gray">Not submitted</span>{% endif %}
       </td>
       <td style="color:#22c55e; font-weight:600;">${{ u.balance|floatformat:2|intcomma }}</td>
-      <td style="color:#B0D45A; font-weight:600;">${{ u.profit|floatformat:2|intcomma }}</td>
+      <td style="color:#B0D45A; font-weight:600;">${{ u.roi|floatformat:2|intcomma }}</td>
       <td style="color:#8fa896; font-size:12px;">{{ u.date_joined|date:"M d, Y" }}</td>
       <td>
         <div class="flex gap-2">
