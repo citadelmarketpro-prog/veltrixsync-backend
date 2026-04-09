@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    AdminWallet, CopyRelationship, Notification, PortfolioAllocation,
+    AdminWallet, CopyRelationship, DummyCopier, Notification, PortfolioAllocation,
     TradeHistory, Trader, TraderAsset, TraderPosition, TraderSection,
     TraderTag, Transaction, User, CopyTrade,
 )
@@ -10,6 +10,12 @@ admin.site.register(CopyTrade)
 
 
 # ── Trader inline helpers ──────────────────────────────────────────────────────
+
+class DummyCopierInline(admin.TabularInline):
+    model  = DummyCopier
+    extra  = 1
+    fields = ("name", "started_at", "allocated_amount", "pl")
+
 
 class TraderSectionInline(admin.TabularInline):
     model  = TraderSection
@@ -36,7 +42,7 @@ class TraderAdmin(admin.ModelAdmin):
     search_fields  = ("name", "specialty", "bio")
     ordering       = ("name",)
     filter_horizontal = ("trader_tags",)
-    inlines        = [TraderSectionInline, TraderAssetInline, PortfolioAllocationInline]
+    inlines        = [TraderSectionInline, TraderAssetInline, PortfolioAllocationInline, DummyCopierInline]
     fieldsets      = (
         ("Identity", {
             "fields": ("name", "specialty", "bio", "avatar", "avatar_color", "trader_tags"),
@@ -115,6 +121,14 @@ class CopyRelationshipAdmin(admin.ModelAdmin):
     search_fields = ("copier__email", "copier__username", "trader__name")
     ordering      = ("-started_at",)
     readonly_fields = ("started_at",)
+
+
+@admin.register(DummyCopier)
+class DummyCopierAdmin(admin.ModelAdmin):
+    list_display   = ("trader", "name", "allocated_amount", "pl", "started_at")
+    list_filter    = ("trader",)
+    search_fields  = ("trader__name", "name")
+    ordering       = ("trader", "-started_at")
 
 
 @admin.register(Notification)

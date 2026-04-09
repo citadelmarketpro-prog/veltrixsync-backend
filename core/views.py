@@ -20,6 +20,7 @@ from .models import (
     AdminWallet,
     CopyRelationship,
     CopyTrade,
+    DummyCopier,
     Notification,
     Trader,
     TradeHistory,
@@ -32,6 +33,7 @@ from .serializers import (
     ChangePasswordSerializer,
     CopyingTraderSerializer,
     CopyRelationshipSerializer,
+    DummyCopierSerializer,
     CopyTradeSerializer,
     DepositSerializer,
     ForgotPasswordSerializer,
@@ -724,8 +726,8 @@ class TraderCopierListView(APIView):
     permission_classes     = [IsAuthenticated]
 
     def get(self, request, pk):
-        copiers = CopyRelationship.objects.filter(trader_id=pk).select_related("copier")
-        return Response(CopyRelationshipSerializer(copiers, many=True).data)
+        copiers = DummyCopier.objects.filter(trader_id=pk)
+        return Response(DummyCopierSerializer(copiers, many=True).data)
 
 
 class TraderSimilarListView(APIView):

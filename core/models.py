@@ -461,3 +461,21 @@ class AdminWallet(models.Model):
 
     def __str__(self):
         return f"{self.get_name_display()} — {self.address[:30]}…"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DummyCopier — display-only copier entries for the trader detail page
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DummyCopier(models.Model):
+    trader           = models.ForeignKey("Trader", on_delete=models.CASCADE, related_name="dummy_copiers")
+    name             = models.CharField(max_length=100)
+    started_at       = models.DateTimeField()
+    allocated_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    pl               = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.trader} / {self.name}"

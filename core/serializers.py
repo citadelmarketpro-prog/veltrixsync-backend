@@ -8,6 +8,7 @@ from .models import (
     AdminWallet,
     CopyRelationship,
     CopyTrade,
+    DummyCopier,
     Notification,
     PortfolioAllocation,
     Trader,
@@ -324,6 +325,28 @@ class CopyRelationshipSerializer(serializers.ModelSerializer):
         u = obj.copier
         full = f"{u.first_name} {u.last_name}".strip()
         return full or u.username
+
+    def get_copyDays(self, obj):
+        from django.utils import timezone
+        return (timezone.now() - obj.started_at).days
+
+    def get_assets(self, obj):
+        return f"{obj.allocated_amount:,.0f}"
+
+    def get_pl(self, obj):
+        sign = "+" if obj.pl >= 0 else ""
+        return f"{sign}{obj.pl:,.1f}"
+
+
+class DummyCopierSerializer(serializers.ModelSerializer):
+    date     = serializers.DateTimeField(source="started_at")
+    copyDays = serializers.SerializerMethodField()
+    assets   = serializers.SerializerMethodField()
+    pl       = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = DummyCopier
+        fields = ["name", "date", "copyDays", "assets", "pl"]
 
     def get_copyDays(self, obj):
         from django.utils import timezone
