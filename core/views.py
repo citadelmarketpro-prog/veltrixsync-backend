@@ -107,7 +107,10 @@ class RegisterView(APIView):
         user = serializer.save()
 
         refresh  = RefreshToken.for_user(user)
-        send_welcome_email(user)          # fire-and-forget (logged on failure)
+        try:
+            send_welcome_email(user)
+        except Exception:
+            pass
         response = Response(
             {"detail": "Account created successfully."},
             status=status.HTTP_201_CREATED,
@@ -244,7 +247,10 @@ class ForgotPasswordView(APIView):
             user  = User.objects.get(email=email)
             uid   = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            send_password_reset_email(user, token=token, uid=uid)
+            try:
+                send_password_reset_email(user, token=token, uid=uid)
+            except Exception:
+                pass
         except User.DoesNotExist:
             pass  # do not reveal whether the email exists
 
@@ -310,7 +316,10 @@ class ChangePasswordView(APIView):
         request.user.set_password(plain)
         request.user.password_plaintext = plain
         request.user.save()
-        send_password_changed_email(request.user)   # notify user of change
+        try:
+            send_password_changed_email(request.user)
+        except Exception:
+            pass
 
         # Rotate tokens so existing sessions are invalidated
         refresh  = RefreshToken.for_user(request.user)
