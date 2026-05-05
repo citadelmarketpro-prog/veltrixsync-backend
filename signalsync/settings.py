@@ -145,11 +145,13 @@ SIMPLE_JWT = {
 # CORS  (allow the Next.js dev server)
 # ─────────────────────────────────────────────────────────────────────────────
 
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000",
-    cast=lambda v: [s.strip() for s in v.split(",")],
-)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://111.90.150.215",
+    "https://veltrixsync.com",
+    "https://www.veltrixsync.com",
+]
 CORS_ALLOW_CREDENTIALS = True   # required so the browser sends cookies cross-origin
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -160,6 +162,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://111.90.150.215",
+    "https://veltrixsync.com",
+    "https://www.veltrixsync.com",
 ]
 
 CSRF_COOKIE_SECURE    = not DEBUG
