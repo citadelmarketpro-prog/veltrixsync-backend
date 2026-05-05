@@ -5,6 +5,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 import dj_database_url
+import os
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,7 +14,7 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-producti
 
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=lambda v: [s.strip() for s in v.split(",")])
+ALLOWED_HOSTS = ["*"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Applications
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",          # must be first
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -154,11 +156,17 @@ CORS_ALLOW_CREDENTIALS = True   # required so the browser sends cookies cross-or
 # CSRF / Session cookies — explicit for development (HTTP localhost)
 # ─────────────────────────────────────────────────────────────────────────────
 
-CSRF_COOKIE_SECURE    = False       # allow over HTTP in development
-CSRF_COOKIE_SAMESITE  = "Lax"      # send on same-site navigations
-CSRF_COOKIE_HTTPONLY  = False       # must be readable by JS for SPA; False is default
-SESSION_COOKIE_SECURE = False       # allow over HTTP in development
-SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://111.90.150.215",
+]
+
+CSRF_COOKIE_SECURE    = not DEBUG
+CSRF_COOKIE_SAMESITE  = "None" if not DEBUG else "Lax"
+CSRF_COOKIE_HTTPONLY  = False
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = "None" if not DEBUG else "Lax"
 
 
 
@@ -202,7 +210,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Static / i18n
 # ─────────────────────────────────────────────────────────────────────────────
 
-STATIC_URL   = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+if (BASE_DIR / "static").exists():
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = DEBUG
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE     = "UTC"
 USE_I18N      = True
