@@ -4,11 +4,13 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from core.urls import dashboard_urlpatterns, trader_urlpatterns, transaction_urlpatterns
+from core.views import ClearSessionView
 
 urlpatterns = [
     path("",                     RedirectView.as_view(url="/panel/", permanent=False)),
     path("admin/",              admin.site.urls),
     path("api/auth/",           include("core.urls")),
+    path("api/clear-session/",  ClearSessionView.as_view(),        name="clear-session"),
     path("api/transactions/",   include(transaction_urlpatterns)),
     path("api/dashboard/",      include(dashboard_urlpatterns)),
     path("api/traders/",        include(trader_urlpatterns)),

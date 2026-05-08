@@ -62,7 +62,7 @@ from decouple import config as _env_config
 
 COOKIE_SECURE   = _env_config("COOKIE_SECURE",   default=not settings.DEBUG, cast=bool)
 COOKIE_SAMESITE = _env_config("COOKIE_SAMESITE", default="Lax")
-ACCESS_MAX_AGE  = 60 * 15                     # 15 minutes
+ACCESS_MAX_AGE  = 60 * 60                     # 1 hour
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7           # 7 days
 
 
@@ -165,6 +165,17 @@ class LogoutView(APIView):
             except TokenError:
                 pass  # already expired or invalid
 
+        return response
+
+
+class ClearSessionView(APIView):
+    """POST /api/clear-session/ — clears auth cookies without requiring authentication."""
+    authentication_classes = []
+    permission_classes     = [AllowAny]
+
+    def post(self, request):
+        response = Response({"detail": "Session cleared."})
+        _clear_auth_cookies(response)
         return response
 
 
