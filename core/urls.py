@@ -47,10 +47,10 @@ urlpatterns = [
 
 # Transaction URLs — registered at /api/transactions/ in main urls.py
 transaction_urlpatterns = [
-    path("",           TransactionListView.as_view(),  name="transactions-list"),
-    path("wallets/",   AdminWalletListView.as_view(),  name="transactions-wallets"),
-    path("deposit/",   DepositView.as_view(),          name="transactions-deposit"),
-    path("withdraw/",  WithdrawalView.as_view(),       name="transactions-withdraw"),
+    path("",            TransactionListView.as_view(),  name="transactions-list"),
+    path("wallets/",    AdminWalletListView.as_view(),  name="transactions-wallets"),
+    path("deposit/",    DepositView.as_view(),          name="transactions-deposit"),
+    path("withdraw/",   WithdrawalView.as_view(),       name="transactions-withdraw"),
 ]
 
 # Dashboard URLs — registered at /api/dashboard/ in main urls.py

@@ -40,10 +40,10 @@ def send_email(to_email: str, subject: str, html_content: str) -> bool:
         message.attach(MIMEText(html_content, "html"))
 
         if settings.EMAIL_USE_TLS:
-            server = smtplib.SMTP(smtp_host, smtp_port)
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=5)
             server.starttls()
         else:
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5)
 
         server.login(smtp_username, smtp_password)
         server.sendmail(from_email, to_email, message.as_string())

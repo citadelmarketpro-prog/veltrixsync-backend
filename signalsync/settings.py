@@ -49,6 +49,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "signalsync.middleware.AppendSlashMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -74,6 +75,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "signalsync.wsgi.application"
+APPEND_SLASH = False
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Database
@@ -132,7 +134,7 @@ REST_FRAMEWORK = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME":  timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME":  timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS":  True,       # issue a new refresh token on every refresh
     "BLACKLIST_AFTER_ROTATION": True,     # blacklist the old one (requires token_blacklist app)
