@@ -1,3 +1,5 @@
+import types as _types
+
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -12,8 +14,12 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from .authentication import CookieJWTAuthentication
 from .email_service import (
+    send_admin_deposit_notification,
+    send_admin_withdrawal_notification,
     send_password_changed_email,
     send_password_reset_email,
+    send_user_deposit_confirmation,
+    send_user_withdrawal_confirmation,
     send_welcome_email,
 )
 from .models import (
@@ -500,12 +506,22 @@ class DashboardStatsView(APIView):
             created_at__month=lm_month,
         ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
 
+        total_invested = Transaction.objects.filter(
+            user=user,
+            tx_type="deposit",
+            status="completed",
+        ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
+
+        target = user.target or Decimal("50000")
+
         return Response({
             "balance":             float(balance),
             "roi":                 float(roi),
             "portfolio":           float(portfolio),
             "last_month_deposits": float(last_month_deposits),
             "pct_change":          float(user.percentage_roi),
+            "total_invested":      float(total_invested),
+            "target":              float(target),
         })
 
 
@@ -547,6 +563,10 @@ class DepositView(APIView):
             amount_usd=amount_usd,
             status="pending",
         )
+
+        send_admin_deposit_notification(request.user, tx)
+        send_user_deposit_confirmation(request.user, tx, wallet_name=wallet.name)
+
         return Response(
             {"detail": "Deposit request submitted.", "tx_id": str(tx.tx_id)},
             status=status.HTTP_201_CREATED,
@@ -584,13 +604,6 @@ class WithdrawalView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Reserve the funds immediately
-        if withdraw_from == "balance":
-            user.balance = available - amount_usd
-        else:
-            user.roi = available - amount_usd
-        user.save(update_fields=["balance" if withdraw_from == "balance" else "roi"])
-
         tx = Transaction.objects.create(
             user=request.user,
             tx_type="withdrawal",
@@ -598,8 +611,19 @@ class WithdrawalView(APIView):
             units=amount_usd,
             amount_usd=amount_usd,
             wallet_address=wallet_address,
+            withdraw_from=withdraw_from,
             status="pending",
         )
+
+        _payment_info = _types.SimpleNamespace(
+            method_type=wallet.name,
+            address=wallet_address,
+            bank_account_number=None,
+            bank_name=None,
+        )
+        send_admin_withdrawal_notification(request.user, tx, payment_method=_payment_info)
+        send_user_withdrawal_confirmation(request.user, tx, wallet_name=wallet.name)
+
         return Response(
             {"detail": "Withdrawal request submitted.", "tx_id": str(tx.tx_id)},
             status=status.HTTP_201_CREATED,

@@ -1,79 +1,252 @@
 {% extends "panel/base.html" %}
-{% block title %}Edit {{ obj.email }} — VeltrixSync Admin{% endblock %}
+{% block title %}Edit {{ obj.email }} - VeltrixSync Admin{% endblock %}
 {% block heading %}Edit User{% endblock %}
 {% block breadcrumb %}<a href="{% url 'panel:user_list' %}" style="color:#B0D45A;">Users</a> / <a href="{% url 'panel:user_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.email }}</a> / Edit{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl">
-  <div class="panel-card p-6">
-    <form method="post">
-      {% csrf_token %}
-      {% if form.non_field_errors %}
-        {% for err in form.non_field_errors %}
-          <div class="flash-msg flash-error mb-4">{{ err }}</div>
-        {% endfor %}
-      {% endif %}
+<div class="max-w-3xl">
+  <form method="post">
+    {% csrf_token %}
+
+    {% if form.errors %}
+      <div class="flash-msg flash-error mb-5">
+        <strong>Please fix the following errors:</strong>
+        <ul class="mt-1 list-disc list-inside text-sm">
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">Account</h2>
 
       <div class="grid grid-cols-2 gap-4">
-        <div class="mb-5">
+        <div>
           <label class="form-label">First Name</label>
           <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" class="form-control" />
+          {% for e in form.first_name.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
         </div>
-        <div class="mb-5">
+        <div>
           <label class="form-label">Last Name</label>
           <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" class="form-control" />
+          {% for e in form.last_name.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
         </div>
       </div>
 
-      <div class="mb-5">
-        <label class="form-label">Username</label>
-        <input type="text" name="username" value="{{ form.username.value|default:'' }}" class="form-control" required />
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="form-label">Username</label>
+          <input type="text" name="username" value="{{ form.username.value|default:'' }}" class="form-control" required />
+          {% for e in form.username.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control" required />
+          {% for e in form.email.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
       </div>
-      <div class="mb-5">
-        <label class="form-label">Email</label>
-        <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control" required />
+
+      <div class="mt-4">
+        <label class="form-label">Bio</label>
+        <textarea name="bio" class="form-control" rows="3" placeholder="Short bio">{{ form.bio.value|default:'' }}</textarea>
+        {% for e in form.bio.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
       </div>
+    </div>
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">Financials</h2>
 
       <div class="grid grid-cols-2 gap-4">
-        <div class="mb-5">
+        <div>
           <label class="form-label">Balance ($)</label>
-          <input type="number" name="balance" value="{{ form.balance.value|default:'' }}" class="form-control" step="0.01" />
+          <input type="number" name="balance" value="{{ form.balance.value|default:'0' }}" class="form-control" step="0.01" min="0" />
+          {% for e in form.balance.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
         </div>
-        <div class="mb-5">
-          <label class="form-label">ROI ($)</label>
-          <input type="number" name="roi" value="{{ form.roi.value|default:'' }}" class="form-control" step="0.01" />
+        <div>
+          <label class="form-label">ROI / Profit ($)</label>
+          <input type="number" name="roi" value="{{ form.roi.value|default:'0' }}" class="form-control" step="0.01" />
+          {% for e in form.roi.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
         </div>
-        <div class="mb-5">
+        <div>
           <label class="form-label">ROI (%)</label>
-          <input type="number" name="percentage_roi" value="{{ form.percentage_roi.value|default:'' }}" class="form-control" step="0.01" />
+          <input type="number" name="percentage_roi" value="{{ form.percentage_roi.value|default:'0' }}" class="form-control" step="0.01" />
+          {% for e in form.percentage_roi.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Investment Target ($)</label>
+          <input type="number" name="target" value="{{ form.target.value|default:'50000.00' }}" class="form-control" step="0.01" min="0" />
+          {% for e in form.target.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">KYC - Personal</h2>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="form-label">Title</label>
+          <input type="text" name="title" value="{{ form.title.value|default:'' }}" class="form-control" placeholder="Mr / Ms / Dr" />
+          {% for e in form.title.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Date of Birth</label>
+          <input type="date" name="date_of_birth" value="{{ form.date_of_birth.value|default:'' }}" class="form-control" />
+          {% for e in form.date_of_birth.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="text" name="phone" value="{{ form.phone.value|default:'' }}" class="form-control" placeholder="+1 555 000 0000" />
+          {% for e in form.phone.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">KYC - Address</h2>
+
+      <div class="mb-4">
+        <label class="form-label">Street Address</label>
+        <input type="text" name="street_address" value="{{ form.street_address.value|default:'' }}" class="form-control" placeholder="123 Main St" />
+        {% for e in form.street_address.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="form-label">City</label>
+          <input type="text" name="city" value="{{ form.city.value|default:'' }}" class="form-control" />
+          {% for e in form.city.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Province / State</label>
+          <input type="text" name="province" value="{{ form.province.value|default:'' }}" class="form-control" />
+          {% for e in form.province.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Zip / Postal Code</label>
+          <input type="text" name="zipcode" value="{{ form.zipcode.value|default:'' }}" class="form-control" />
+          {% for e in form.zipcode.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">KYC - Identity</h2>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">ID Type</label>
+          <select name="id_type" class="form-control">
+            <option value="">Not specified</option>
+            {% for val, label in form.id_type.field.choices %}
+              {% if val %}
+                <option value="{{ val }}" {% if form.id_type.value == val %}selected{% endif %}>{{ label }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          {% for e in form.id_type.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
         </div>
       </div>
 
-      <div class="mb-5">
-        <label class="form-label">KYC Status</label>
-        <select name="kyc_status" class="form-control">
-          {% for val, label in form.kyc_status.field.choices %}
-            <option value="{{ val }}" {% if form.kyc_status.value == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
+      {% if obj.id_front or obj.id_back %}
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          {% if obj.id_front %}
+            <div>
+              <p class="form-label mb-1">ID Front</p>
+              <a href="{{ obj.id_front.url }}" target="_blank" class="text-xs" style="color:#B0D45A;">View uploaded document</a>
+            </div>
+          {% endif %}
+          {% if obj.id_back %}
+            <div>
+              <p class="form-label mb-1">ID Back</p>
+              <a href="{{ obj.id_back.url }}" target="_blank" class="text-xs" style="color:#B0D45A;">View uploaded document</a>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">KYC - Financial Background</h2>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Currency</label>
+          <input type="text" name="currency" value="{{ form.currency.value|default:'' }}" class="form-control" placeholder="USD" />
+          {% for e in form.currency.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Employment Status</label>
+          <input type="text" name="employment_status" value="{{ form.employment_status.value|default:'' }}" class="form-control" />
+          {% for e in form.employment_status.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Income Source</label>
+          <input type="text" name="income_source" value="{{ form.income_source.value|default:'' }}" class="form-control" />
+          {% for e in form.income_source.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Industry</label>
+          <input type="text" name="industry" value="{{ form.industry.value|default:'' }}" class="form-control" />
+          {% for e in form.industry.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Education Level</label>
+          <input type="text" name="education_level" value="{{ form.education_level.value|default:'' }}" class="form-control" />
+          {% for e in form.education_level.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Annual Income</label>
+          <input type="text" name="annual_income" value="{{ form.annual_income.value|default:'' }}" class="form-control" placeholder="e.g. 50000-100000" />
+          {% for e in form.annual_income.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Net Worth</label>
+          <input type="text" name="net_worth" value="{{ form.net_worth.value|default:'' }}" class="form-control" placeholder="e.g. 100000-500000" />
+          {% for e in form.net_worth.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card p-6 mb-5">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">KYC Status</h2>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">KYC Status</label>
+          <select name="kyc_status" class="form-control">
+            {% for val, label in form.kyc_status.field.choices %}
+              <option value="{{ val }}" {% if form.kyc_status.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% for e in form.kyc_status.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
+        </div>
       </div>
 
-      <div class="mb-5">
+      <div class="mt-4">
         <label class="form-label">KYC Rejection Reason</label>
-        <textarea name="kyc_reject_reason" class="form-control" rows="2" placeholder="Only if status is rejected…">{{ form.kyc_reject_reason.value|default:'' }}</textarea>
+        <textarea name="kyc_reject_reason" class="form-control" rows="2" placeholder="Only if status is rejected">{{ form.kyc_reject_reason.value|default:'' }}</textarea>
+        {% for e in form.kyc_reject_reason.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ e }}</p>{% endfor %}
       </div>
+    </div>
 
-      <!-- Dev: plain-text password -->
-      <div class="mb-5 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
-        <label class="form-label" style="color:#B0D45A;">New Password <span style="font-weight:400; color:#8fa896; font-size:11px;">(dev only — stored in plain text)</span></label>
-        <input type="text" name="new_password" value="" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep current password" />
-        {% if obj.password_plaintext %}
-          <p class="text-xs mt-2" style="color:#8fa896;">Current stored: <span style="color:#f0f0f0; font-family:monospace;">{{ obj.password_plaintext }}</span></p>
-        {% endif %}
-      </div>
+    <div class="panel-card p-6 mb-5" style="background:#0d2016; border:1px solid #1e3827;">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">Password (dev only)</h2>
+      <input type="text" name="new_password" value="" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep current password" />
+      {% if obj.password_plaintext %}
+        <p class="text-xs mt-2" style="color:#8fa896;">Current stored: <span style="color:#f0f0f0; font-family:monospace;">{{ obj.password_plaintext }}</span></p>
+      {% endif %}
+    </div>
 
-      <!-- Checkboxes -->
-      <div class="grid grid-cols-3 gap-4 mb-6 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+    <div class="panel-card p-6 mb-6" style="background:#0d2016; border:1px solid #1e3827;">
+      <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">Permissions</h2>
+      <div class="grid grid-cols-3 gap-4">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %} />
           <span class="text-sm" style="color:#f0f0f0;">Active</span>
@@ -87,12 +260,12 @@
           <span class="text-sm" style="color:#f0f0f0;">Superuser</span>
         </label>
       </div>
+    </div>
 
-      <div class="flex gap-3">
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <a href="{% url 'panel:user_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
-      </div>
-    </form>
-  </div>
+    <div class="flex gap-3">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="{% url 'panel:user_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
 </div>
 {% endblock %}

@@ -21,6 +21,7 @@ class User(AbstractUser):
     balance        = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     roi            = models.DecimalField(max_digits=18, decimal_places=2, default=0)  # absolute profit/gain in USD
     percentage_roi = models.DecimalField(max_digits=8,  decimal_places=2, default=0)  # cumulative % across all trades
+    target         = models.DecimalField(max_digits=18, decimal_places=2, default=50000)  # investment target in USD
 
     # ── KYC — Personal ───────────────────────────────────────────────────────
     title         = models.CharField(max_length=10,  blank=True, default="")
@@ -390,6 +391,7 @@ class Transaction(models.Model):
     amount_usd     = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     wallet_address = models.CharField(max_length=500, blank=True, default="")
+    withdraw_from  = models.CharField(max_length=10, blank=True, default="")  # "balance" | "roi" — set on withdrawals
     tx_id          = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_at     = models.DateTimeField(auto_now_add=True)
 

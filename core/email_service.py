@@ -3,10 +3,8 @@ Email service for VeltrixSync
 HTML email templates styled to match the VeltrixSync brand.
 """
 
-import smtplib
 import random
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
@@ -25,33 +23,17 @@ def generate_verification_code():
 
 
 def send_email(to_email: str, subject: str, html_content: str) -> bool:
-    """Send an HTML email via SMTP (TLS or SSL depending on settings)."""
+    """Send an HTML email via Resend API."""
     try:
-        smtp_host     = settings.EMAIL_HOST
-        smtp_port     = settings.EMAIL_PORT
-        smtp_username = settings.EMAIL_HOST_USER
-        smtp_password = settings.EMAIL_HOST_PASSWORD
-        from_email    = settings.DEFAULT_FROM_EMAIL
-
-        message = MIMEMultipart("alternative")
-        message["Subject"] = subject
-        message["From"]    = from_email
-        message["To"]      = to_email
-        message.attach(MIMEText(html_content, "html"))
-
-        if settings.EMAIL_USE_TLS:
-            server = smtplib.SMTP(smtp_host, smtp_port, timeout=5)
-            server.starttls()
-        else:
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5)
-
-        server.login(smtp_username, smtp_password)
-        server.sendmail(from_email, to_email, message.as_string())
-        server.quit()
-
+        resend.api_key = settings.RESEND_API_KEY
+        resend.Emails.send({
+            "from": settings.DEFAULT_FROM_EMAIL,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content,
+        })
         logger.info(f"Email sent successfully to {to_email}")
         return True
-
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return False
@@ -639,7 +621,7 @@ def send_admin_deposit_notification(user, transaction) -> bool:
         <div class="heading">New Deposit Request</div>
         <div class="text">A deposit request has been submitted and requires review.</div>
         <div class="amount-box deposit">
-            <div class="amount">${transaction.amount}</div>
+            <div class="amount">${transaction.amount_usd}</div>
             <div class="amount-label">{getattr(transaction, 'unit', '')} {getattr(transaction, 'currency', '')}</div>
         </div>
         <div class="section-title">Transaction Details</div>
@@ -661,8 +643,120 @@ def send_admin_deposit_notification(user, transaction) -> bool:
         <div class="footer-text">Admin notification &middot; Action required &middot; {now}</div>
     </div>
     """
-    subject = f"[VeltrixSync] Deposit Request — {user.email} — ${transaction.amount}"
+    subject = f"[VeltrixSync] Deposit Request — {user.email} — ${transaction.amount_usd}"
     return send_email(admin_email, subject, _wrap(body))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin: withdrawal notification
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# User: deposit confirmation
+# ─────────────────────────────────────────────────────────────────────────────
+
+def send_user_deposit_confirmation(user, transaction, wallet_name: str = "") -> bool:
+    name     = user.first_name or user.username or "Trader"
+    tx_date  = transaction.created_at.strftime("%b %d, %Y at %I:%M %p UTC")
+    asset_label = transaction.asset + (f" ({wallet_name})" if wallet_name else "")
+    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+    body = f"""
+    {_header_html()}
+    <div class="body-content">
+        <div class="greeting">Hello {name},</div>
+        <div class="heading">Deposit Request Received</div>
+        <div class="text">
+            We've received your deposit request and it is now under review.
+            You will be notified once it has been approved and credited to your account.
+        </div>
+        <div class="amount-box deposit">
+            <div class="amount">${transaction.amount_usd}</div>
+            <div class="amount-label">Deposit Amount (USD)</div>
+        </div>
+        <div class="section-title">Request Details</div>
+        <table class="detail-table">
+            <tr>
+                <td class="label">Reference</td>
+                <td class="value" style="font-size:12px;font-family:monospace;">{transaction.tx_id}</td>
+            </tr>
+            <tr><td class="label">Asset</td><td class="value">{asset_label}</td></tr>
+            <tr>
+                <td class="label">Status</td>
+                <td class="value"><span class="badge badge-pending">Pending</span></td>
+            </tr>
+            <tr><td class="label">Date</td><td class="value">{tx_date}</td></tr>
+        </table>
+        <div class="notice">
+            <p>Deposits are typically reviewed within <strong>24–48 hours</strong>.
+            If you have any questions, please contact our support team.</p>
+        </div>
+        <div style="text-align:center; margin:28px 0;">
+            <a href="{frontend}/transactions" class="btn">View Transaction</a>
+        </div>
+    </div>
+    {_footer_html(user.email)}
+    """
+    return send_email(user.email, "Deposit Request Received — VeltrixSync", _wrap(body))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# User: withdrawal confirmation
+# ─────────────────────────────────────────────────────────────────────────────
+
+def send_user_withdrawal_confirmation(user, transaction, wallet_name: str = "") -> bool:
+    name     = user.first_name or user.username or "Trader"
+    tx_date  = transaction.created_at.strftime("%b %d, %Y at %I:%M %p UTC")
+    asset_label = transaction.asset + (f" ({wallet_name})" if wallet_name else "")
+    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+    addr = transaction.wallet_address or ""
+    masked_address = (addr[:6] + "..." + addr[-4:]) if len(addr) > 10 else addr
+
+    destination_row = (
+        f'<tr><td class="label">Destination</td>'
+        f'<td class="value" style="font-size:12px;font-family:monospace;">{masked_address}</td></tr>'
+        if masked_address else ""
+    )
+
+    body = f"""
+    {_header_html()}
+    <div class="body-content">
+        <div class="greeting">Hello {name},</div>
+        <div class="heading">Withdrawal Request Submitted</div>
+        <div class="text">
+            Your withdrawal request has been submitted and is pending approval.
+            The requested amount has been reserved from your account balance.
+        </div>
+        <div class="amount-box withdraw">
+            <div class="amount">${transaction.amount_usd}</div>
+            <div class="amount-label">Withdrawal Amount (USD)</div>
+        </div>
+        <div class="section-title">Request Details</div>
+        <table class="detail-table">
+            <tr>
+                <td class="label">Reference</td>
+                <td class="value" style="font-size:12px;font-family:monospace;">{transaction.tx_id}</td>
+            </tr>
+            <tr><td class="label">Asset</td><td class="value">{asset_label}</td></tr>
+            {destination_row}
+            <tr>
+                <td class="label">Status</td>
+                <td class="value"><span class="badge badge-pending">Pending</span></td>
+            </tr>
+            <tr><td class="label">Date</td><td class="value">{tx_date}</td></tr>
+        </table>
+        <div class="notice">
+            <p>Withdrawals are typically processed within <strong>24–48 hours</strong> after admin
+            approval. If you did not initiate this request, please contact support immediately.</p>
+        </div>
+        <div style="text-align:center; margin:28px 0;">
+            <a href="{frontend}/transactions" class="btn">View Transaction</a>
+        </div>
+    </div>
+    {_footer_html(user.email)}
+    """
+    return send_email(user.email, "Withdrawal Request Submitted — VeltrixSync", _wrap(body))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -695,7 +789,7 @@ def send_admin_withdrawal_notification(user, transaction, payment_method=None) -
             A withdrawal request has been submitted and requires immediate processing.
         </div>
         <div class="amount-box withdraw">
-            <div class="amount">${transaction.amount}</div>
+            <div class="amount">${transaction.amount_usd}</div>
             <div class="amount-label">Withdrawal Amount</div>
         </div>
         <div class="notice">
@@ -726,5 +820,5 @@ def send_admin_withdrawal_notification(user, transaction, payment_method=None) -
         <div class="footer-text">Admin notification &middot; Urgent action required &middot; {now}</div>
     </div>
     """
-    subject = f"[VeltrixSync] Withdrawal Request — {user.email} — ${transaction.amount}"
+    subject = f"[VeltrixSync] Withdrawal Request — {user.email} — ${transaction.amount_usd}"
     return send_email(admin_email, subject, _wrap(body))

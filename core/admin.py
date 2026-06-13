@@ -168,13 +168,23 @@ class TransactionAdmin(admin.ModelAdmin):
 
     @admin.action(description="Approve selected transactions")
     def approve_transactions(self, request, queryset):
+        from decimal import Decimal
         for tx in queryset.filter(status="pending"):
             tx.status = "completed"
             tx.save(update_fields=["status"])
+            user = tx.user
             if tx.tx_type == "deposit":
-                user = tx.user
-                user.balance = (user.balance or 0) + tx.amount_usd
+                user.balance = (user.balance or Decimal("0")) + tx.amount_usd
                 user.save(update_fields=["balance"])
+            elif tx.tx_type == "withdrawal":
+                field = tx.withdraw_from or "balance"
+                current = (user.balance if field == "balance" else user.roi) or Decimal("0")
+                if field == "balance":
+                    user.balance = max(current - tx.amount_usd, Decimal("0"))
+                    user.save(update_fields=["balance"])
+                else:
+                    user.roi = max(current - tx.amount_usd, Decimal("0"))
+                    user.save(update_fields=["roi"])
         self.message_user(request, "Selected transactions approved and balances updated.")
 
     @admin.action(description="Reject selected transactions")

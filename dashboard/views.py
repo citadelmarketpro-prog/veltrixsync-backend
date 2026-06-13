@@ -100,12 +100,15 @@ def user_detail(request, pk):
 
 @superuser_required
 def user_edit(request, pk):
+    import logging as _log
     obj  = get_object_or_404(User, pk=pk)
     form = UserEditForm(request.POST or None, instance=obj)
     if form.is_valid():
         form.save()
         messages.success(request, f"User {obj.email} updated.")
         return redirect("panel:user_detail", pk=pk)
+    if request.method == "POST":
+        _log.getLogger(__name__).warning("user_edit errors pk=%s: %s", pk, form.errors.as_json())
     return render(request, "panel/users/edit.html", {"form": form, "obj": obj})
 
 

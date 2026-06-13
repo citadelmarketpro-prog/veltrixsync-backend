@@ -33,13 +33,29 @@ class UserEditForm(forms.ModelForm):
     class Meta:
         model = User
         fields = [
+            # Account
             "first_name", "last_name", "username", "email",
-            "balance", "roi", "percentage_roi",
+            "bio",
+            # Financials
+            "balance", "roi", "percentage_roi", "target",
+            # KYC — Personal
+            "title", "date_of_birth", "phone",
+            # KYC — Address
+            "street_address", "city", "province", "zipcode",
+            # KYC — Identity
+            "id_type",
+            # KYC — Financial background
+            "currency", "employment_status", "income_source",
+            "industry", "education_level", "annual_income", "net_worth",
+            # KYC — Status
             "kyc_status", "kyc_reject_reason",
+            # Permissions
             "is_active", "is_staff", "is_superuser",
         ]
         widgets = {
+            "bio":              forms.Textarea(attrs={"rows": 3}),
             "kyc_reject_reason": forms.Textarea(attrs={"rows": 3}),
+            "date_of_birth":    forms.DateInput(attrs={"type": "date"}),
         }
 
     def save(self, commit=True):
