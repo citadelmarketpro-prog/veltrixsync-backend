@@ -21,7 +21,6 @@ class User(AbstractUser):
     balance        = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     roi            = models.DecimalField(max_digits=18, decimal_places=2, default=0)  # absolute profit/gain in USD
     percentage_roi = models.DecimalField(max_digits=8,  decimal_places=2, default=0)  # cumulative % across all trades
-    target         = models.DecimalField(max_digits=18, decimal_places=2, default=50000)  # investment target in USD
 
     # ── KYC — Personal ───────────────────────────────────────────────────────
     title         = models.CharField(max_length=10,  blank=True, default="")

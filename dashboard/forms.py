@@ -37,7 +37,7 @@ class UserEditForm(forms.ModelForm):
             "first_name", "last_name", "username", "email",
             "bio",
             # Financials
-            "balance", "roi", "percentage_roi", "target",
+            "balance", "roi", "percentage_roi",
             # KYC — Personal
             "title", "date_of_birth", "phone",
             # KYC — Address

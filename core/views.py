@@ -512,8 +512,6 @@ class DashboardStatsView(APIView):
             status="completed",
         ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
 
-        target = user.target or Decimal("50000")
-
         return Response({
             "balance":             float(balance),
             "roi":                 float(roi),
@@ -521,7 +519,6 @@ class DashboardStatsView(APIView):
             "last_month_deposits": float(last_month_deposits),
             "pct_change":          float(user.percentage_roi),
             "total_invested":      float(total_invested),
-            "target":              float(target),
         })
 
 
@@ -884,6 +881,41 @@ class PortfolioBreakdownView(APIView):
         })
 
 
+class PortfolioChartView(APIView):
+    """GET /api/dashboard/portfolio-chart/ -- cumulative PNL time-series for the balance line chart."""
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Sum
+        from django.db.models.functions import TruncDate
+        from django.utils import timezone
+        from datetime import timedelta
+        from decimal import Decimal
+
+        user  = request.user
+        since = timezone.now() - timedelta(days=90)
+
+        daily_rows = (
+            CopyTrade.objects
+            .filter(user=user, created_at__gte=since)
+            .annotate(day=TruncDate("created_at"))
+            .values("day")
+            .annotate(daily_pnl=Sum("pnl"))
+            .order_by("day")
+        )
+
+        cumulative = Decimal("0")
+        points = []
+        for row in daily_rows:
+            cumulative += row["daily_pnl"] or Decimal("0")
+            points.append({
+                "date":           row["day"].strftime("%Y-%m-%d"),
+                "daily_pnl":      float(row["daily_pnl"] or 0),
+                "cumulative_pnl": float(cumulative),
+            })
+
+        return Response({"points": points})
 
 
 
