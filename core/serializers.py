@@ -527,7 +527,7 @@ class CopyTradeSerializer(serializers.ModelSerializer):
         return obj.pnl >= 0
 
     def get_pnl_display(self, obj):
-        sign = "+" if obj.pnl >= 0 else ""
+        sign = "+" if obj.pnl >= 0 else "-"
         return f"{sign}${abs(obj.pnl):,.2f}"
 
 

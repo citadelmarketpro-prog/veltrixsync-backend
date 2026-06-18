@@ -6,6 +6,8 @@ from .views import (
     DashboardStatsView,
     PortfolioBreakdownView,
     PortfolioChartView,
+    TransferInfoView,
+    TransferView,
     DepositView,
     ForgotPasswordView,
     KycView,
@@ -60,6 +62,12 @@ dashboard_urlpatterns = [
     path("copy-trades/",          CopyTradeListView.as_view(),         name="dashboard-copy-trades"),
     path("portfolio-breakdown/",  PortfolioBreakdownView.as_view(),    name="dashboard-portfolio-breakdown"),
     path("portfolio-chart/",      PortfolioChartView.as_view(),        name="dashboard-portfolio-chart"),
+]
+
+# Transfer URLs — registered at /api/transfer/ in main urls.py
+transfer_urlpatterns = [
+    path("info/",  TransferInfoView.as_view(), name="transfer-info"),
+    path("",       TransferView.as_view(),     name="transfer"),
 ]
 
 # Trader URLs — registered at /api/traders/ in main urls.py

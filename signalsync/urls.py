@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
-from core.urls import dashboard_urlpatterns, trader_urlpatterns, transaction_urlpatterns
+from core.urls import dashboard_urlpatterns, trader_urlpatterns, transaction_urlpatterns, transfer_urlpatterns
 from core.views import ClearSessionView
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/transactions/",   include(transaction_urlpatterns)),
     path("api/dashboard/",      include(dashboard_urlpatterns)),
     path("api/traders/",        include(trader_urlpatterns)),
+    path("api/transfer/",       include(transfer_urlpatterns)),
     path("panel/",              include("dashboard.urls", namespace="panel")),
 ]
 

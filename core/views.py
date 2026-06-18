@@ -486,25 +486,20 @@ class DashboardStatsView(APIView):
         from decimal import Decimal
 
         user = request.user
+        now  = timezone.now()
 
         balance   = user.balance        or Decimal("0")
         roi       = user.roi            or Decimal("0")   # absolute profit in USD
         portfolio = balance + roi                          # total shown at top
 
-        # Last-month completed deposits (for the "Compared to $X last month" label)
-        now = timezone.now()
-        if now.month == 1:
-            lm_year, lm_month = now.year - 1, 12
-        else:
-            lm_year, lm_month = now.year, now.month - 1
-
-        last_month_deposits = Transaction.objects.filter(
+        # Today's PNL from CopyTrade records created today
+        today_pnl = CopyTrade.objects.filter(
             user=user,
-            tx_type="deposit",
-            status="completed",
-            created_at__year=lm_year,
-            created_at__month=lm_month,
-        ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
+            created_at__date=now.date(),
+        ).aggregate(s=Sum("pnl"))["s"] or Decimal("0")
+
+        # % of portfolio gained/lost today
+        today_pnl_pct = float(today_pnl / portfolio * 100) if portfolio > 0 else 0.0
 
         total_invested = Transaction.objects.filter(
             user=user,
@@ -513,12 +508,13 @@ class DashboardStatsView(APIView):
         ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0")
 
         return Response({
-            "balance":             float(balance),
-            "roi":                 float(roi),
-            "portfolio":           float(portfolio),
-            "last_month_deposits": float(last_month_deposits),
-            "pct_change":          float(user.percentage_roi),
-            "total_invested":      float(total_invested),
+            "balance":        float(balance),
+            "roi":            float(roi),
+            "portfolio":      float(portfolio),
+            "pct_change":     float(user.percentage_roi),
+            "total_invested": float(total_invested),
+            "today_pnl":      float(today_pnl),
+            "today_pnl_pct":  round(today_pnl_pct, 2),
         })
 
 
@@ -804,80 +800,137 @@ class CopyTradeListView(APIView):
 
 
 class PortfolioBreakdownView(APIView):
-    """GET /api/dashboard/portfolio-breakdown/ -- portfolio breakdown by category + growth %."""
+    """GET /api/dashboard/portfolio-breakdown/ -- balance/profit/deposited breakdown + growth %."""
     authentication_classes = [CookieJWTAuthentication]
     permission_classes     = [IsAuthenticated]
 
     def get(self, request):
-        from django.db.models import Sum, Count
-        from django.utils import timezone
-        from datetime import timedelta
+        from django.db.models import Sum
         from decimal import Decimal
 
         user = request.user
-        now  = timezone.now()
 
-        # Growth: compare this month's total PNL vs last month's
-        last_month_date = now - timedelta(days=32)
-        this_month_pnl = CopyTrade.objects.filter(
-            user=user,
-            created_at__year=now.year,
-            created_at__month=now.month,
-        ).aggregate(s=Sum("pnl"))["s"] or Decimal("0")
+        # Growth % = overall portfolio ROI (roi / total_invested * 100)
+        # Same value shown in the line chart label; always non-zero when the user has profit.
+        growth_pct = float(user.percentage_roi or 0)
 
-        last_month_pnl = CopyTrade.objects.filter(
-            user=user,
-            created_at__year=last_month_date.year,
-            created_at__month=last_month_date.month,
-        ).aggregate(s=Sum("pnl"))["s"] or Decimal("0")
-
-        if last_month_pnl != 0:
-            growth_pct = float((this_month_pnl - last_month_pnl) / abs(last_month_pnl) * 100)
-        elif this_month_pnl > 0:
-            growth_pct = 100.0
-        else:
-            growth_pct = 0.0
-
-        # Breakdown by asset_type (stock/crypto/forex)
-        cat_rows = (
-            CopyTrade.objects
-            .filter(user=user)
-            .values("asset_type")
-            .annotate(total_pnl=Sum("pnl"), count=Count("id"))
-            .order_by("-total_pnl")
+        # Portfolio components
+        balance = float(user.balance or Decimal("0"))
+        roi     = float(user.roi     or Decimal("0"))
+        total_invested = float(
+            Transaction.objects.filter(
+                user=user,
+                tx_type="deposit",
+                status="completed",
+            ).aggregate(s=Sum("amount_usd"))["s"] or Decimal("0")
         )
 
-        CATEGORY_META = {
-            "stock":  {"label": "Stocks", "legend_color": "#9ab4a2", "base_color": "#8aaa96", "line_color": "#a8c4b0"},
-            "forex":  {"label": "Forex",  "legend_color": "#4a7862", "base_color": "#3d6852", "line_color": "#527c66"},
-            "crypto": {"label": "Crypto", "legend_color": "#2a5c3a", "base_color": "#1a4a2e", "line_color": "#2a6a40"},
-        }
+        # Bar heights are proportional to positive component values
+        bar_balance   = max(0.0, balance)
+        bar_profit    = max(0.0, roi)
+        bar_deposited = max(0.0, total_invested)
+        total_abs     = bar_balance + bar_profit + bar_deposited or 1.0
 
-        total_abs = sum(abs(float(r["total_pnl"] or 0)) for r in cat_rows)
+        def pct_bar(v):
+            return round(max(0.0, v) / total_abs * 100, 1)
 
-        breakdown = []
-        for row in cat_rows:
-            pnl_val  = float(row["total_pnl"] or 0)
-            pct      = round(abs(pnl_val) / total_abs * 100, 1) if total_abs > 0 else 0
-            asset_type = row["asset_type"]
-            meta     = CATEGORY_META.get(asset_type, {
-                "label": asset_type.title(), "legend_color": "#6a8a7a",
-                "base_color": "#4a6a5a", "line_color": "#6a8a7a",
-            })
-            breakdown.append({
-                "category":     asset_type,
-                "label":        meta["label"],
-                "legend_color": meta["legend_color"],
-                "base_color":   meta["base_color"],
-                "line_color":   meta["line_color"],
-                "pnl":          str(round(pnl_val, 2)),
-                "pct":          pct,
-                "count":        row["count"],
-            })
+        breakdown = [
+            {
+                "category":     "balance",
+                "label":        "Trading Balance",
+                "legend_color": "#9ab4a2",
+                "base_color":   "#8aaa96",
+                "line_color":   "#a8c4b0",
+                "pnl":          str(round(balance, 2)),
+                "pct":          pct_bar(balance),
+                "count":        0,
+            },
+            {
+                "category":     "profit",
+                "label":        "Profit",
+                "legend_color": "#4a7862",
+                "base_color":   "#3d6852",
+                "line_color":   "#527c66",
+                "pnl":          str(round(roi, 2)),
+                "pct":          pct_bar(roi),
+                "count":        0,
+            },
+            {
+                "category":     "deposited",
+                "label":        "Deposited",
+                "legend_color": "#B0D45A",
+                "base_color":   "#9aba50",
+                "line_color":   "#c4e86e",
+                "pnl":          str(round(total_invested, 2)),
+                "pct":          pct_bar(total_invested),
+                "count":        0,
+            },
+        ]
 
         return Response({
             "growth_pct": round(growth_pct, 1),
             "breakdown":  breakdown,
+        })
+
+
+class TransferInfoView(APIView):
+    """GET /api/transfer/info/ -- returns current balance and profit for the transfer modal."""
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+
+    def get(self, request):
+        from decimal import Decimal
+        user    = request.user
+        balance = user.balance or Decimal("0")
+        roi     = user.roi     or Decimal("0")
+        return Response({
+            "balance":      float(balance),
+            "profit":       float(roi),
+            "can_transfer": True,
+            "currency":     "USD",
+        })
+
+
+class TransferView(APIView):
+    """POST /api/transfer/ -- transfer funds between balance and profit pools."""
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+
+    def post(self, request):
+        from decimal import Decimal, InvalidOperation
+
+        direction = request.data.get("direction")  # "balance_to_profit" | "profit_to_balance"
+        try:
+            amount = Decimal(str(request.data.get("amount", "0")))
+        except InvalidOperation:
+            return Response({"error": "Invalid amount."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if amount <= 0:
+            return Response({"error": "Amount must be greater than zero."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if direction not in ("balance_to_profit", "profit_to_balance"):
+            return Response({"error": "Invalid direction."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        balance = user.balance or Decimal("0")
+        roi     = user.roi     or Decimal("0")
+
+        if direction == "balance_to_profit":
+            if balance < amount:
+                return Response({"error": "Insufficient balance."}, status=status.HTTP_400_BAD_REQUEST)
+            user.balance = balance - amount
+            user.roi     = roi     + amount
+        else:
+            if roi < amount:
+                return Response({"error": "Insufficient profit."}, status=status.HTTP_400_BAD_REQUEST)
+            user.roi     = roi     - amount
+            user.balance = balance + amount
+
+        user.save(update_fields=["balance", "roi"])
+        return Response({
+            "message": "Transfer successful.",
+            "balance": float(user.balance),
+            "profit":  float(user.roi),
         })
 
 
