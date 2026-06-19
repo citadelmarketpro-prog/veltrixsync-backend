@@ -815,17 +815,30 @@ class PortfolioBreakdownView(APIView):
         growth_pct = float(user.percentage_roi or 0)
 
         # Portfolio components
-        balance = float(user.balance or Decimal("0"))
-        roi     = float(user.roi     or Decimal("0"))
-        # Bar heights are proportional to positive component values
+        balance       = float(user.balance or Decimal("0"))
+        roi           = float(user.roi     or Decimal("0"))
+        total_balance = balance + roi
+
+        # Normalize bars against the largest positive value so nothing exceeds 100%
+        bar_total   = max(0.0, total_balance)
         bar_balance = max(0.0, balance)
         bar_profit  = max(0.0, roi)
-        total_abs   = bar_balance + bar_profit or 1.0
+        reference   = max(bar_total, bar_balance, bar_profit) or 1.0
 
         def pct_bar(v):
-            return round(max(0.0, v) / total_abs * 100, 1)
+            return round(max(0.0, v) / reference * 100, 1)
 
         breakdown = [
+            {
+                "category":     "total",
+                "label":        "Total Balance",
+                "legend_color": "#2a5a3c",
+                "base_color":   "#1e4a30",
+                "line_color":   "#3a7a50",
+                "pnl":          str(round(total_balance, 2)),
+                "pct":          pct_bar(total_balance),
+                "count":        0,
+            },
             {
                 "category":     "balance",
                 "label":        "Deposited",
