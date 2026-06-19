@@ -817,19 +817,10 @@ class PortfolioBreakdownView(APIView):
         # Portfolio components
         balance = float(user.balance or Decimal("0"))
         roi     = float(user.roi     or Decimal("0"))
-        total_invested = float(
-            Transaction.objects.filter(
-                user=user,
-                tx_type="deposit",
-                status="completed",
-            ).aggregate(s=Sum("amount_usd"))["s"] or Decimal("0")
-        )
-
         # Bar heights are proportional to positive component values
-        bar_balance   = max(0.0, balance)
-        bar_profit    = max(0.0, roi)
-        bar_deposited = max(0.0, total_invested)
-        total_abs     = bar_balance + bar_profit + bar_deposited or 1.0
+        bar_balance = max(0.0, balance)
+        bar_profit  = max(0.0, roi)
+        total_abs   = bar_balance + bar_profit or 1.0
 
         def pct_bar(v):
             return round(max(0.0, v) / total_abs * 100, 1)
@@ -837,7 +828,7 @@ class PortfolioBreakdownView(APIView):
         breakdown = [
             {
                 "category":     "balance",
-                "label":        "Trading Balance",
+                "label":        "Deposited",
                 "legend_color": "#9ab4a2",
                 "base_color":   "#8aaa96",
                 "line_color":   "#a8c4b0",
@@ -853,16 +844,6 @@ class PortfolioBreakdownView(APIView):
                 "line_color":   "#527c66",
                 "pnl":          str(round(roi, 2)),
                 "pct":          pct_bar(roi),
-                "count":        0,
-            },
-            {
-                "category":     "deposited",
-                "label":        "Deposited",
-                "legend_color": "#B0D45A",
-                "base_color":   "#9aba50",
-                "line_color":   "#c4e86e",
-                "pnl":          str(round(total_invested, 2)),
-                "pct":          pct_bar(total_invested),
                 "count":        0,
             },
         ]
