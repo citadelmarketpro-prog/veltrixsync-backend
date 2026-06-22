@@ -5,8 +5,48 @@ from .models import (
     TraderTag, Transaction, User, CopyTrade,
 )
 
-admin.site.register(User)
-admin.site.register(CopyTrade)
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display   = ("email", "username", "first_name", "last_name", "balance", "roi", "kyc_status", "allow_transfer", "date_joined")
+    list_filter    = ("kyc_status", "allow_transfer", "is_active", "is_staff")
+    search_fields  = ("email", "username", "first_name", "last_name")
+    ordering       = ("-date_joined",)
+    list_editable  = ("allow_transfer",)
+    readonly_fields = ("date_joined", "last_login", "password")
+    fieldsets = (
+        ("Account", {
+            "fields": ("email", "username", "password", "is_active", "is_staff", "is_superuser"),
+        }),
+        ("Profile", {
+            "fields": ("first_name", "last_name", "bio", "avatar", "phone"),
+        }),
+        ("Financials", {
+            "fields": ("balance", "roi", "percentage_roi"),
+        }),
+        ("Permissions", {
+            "fields": ("allow_transfer",),
+            "description": "Control which features this user is allowed to access.",
+        }),
+        ("KYC", {
+            "fields": (
+                "kyc_status", "kyc_submitted_at", "kyc_reviewed_at", "kyc_reject_reason",
+                "title", "date_of_birth", "street_address", "city", "province", "zipcode",
+                "id_type", "id_front", "id_back",
+            ),
+            "classes": ("collapse",),
+        }),
+        ("Timestamps", {
+            "fields": ("date_joined", "last_login"),
+        }),
+    )
+
+
+@admin.register(CopyTrade)
+class CopyTradeAdmin(admin.ModelAdmin):
+    list_display  = ("user", "asset", "asset_type", "direction", "earning_pct", "pnl", "status", "created_at")
+    list_filter   = ("status", "asset_type", "direction")
+    search_fields = ("user__email", "asset")
+    ordering      = ("-created_at",)
 
 
 # ── Trader inline helpers ──────────────────────────────────────────────────────

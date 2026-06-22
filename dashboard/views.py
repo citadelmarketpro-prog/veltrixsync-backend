@@ -130,6 +130,17 @@ def user_delete(request, pk):
 
 @superuser_required
 @require_POST
+def user_toggle_transfer(request, pk):
+    obj = get_object_or_404(User, pk=pk)
+    obj.allow_transfer = not obj.allow_transfer
+    obj.save(update_fields=["allow_transfer"])
+    state = "enabled" if obj.allow_transfer else "disabled"
+    messages.success(request, f"Transfer {state} for {obj.email}.")
+    return redirect("panel:user_detail", pk=pk)
+
+
+@superuser_required
+@require_POST
 def user_approve_kyc(request, pk):
     obj = get_object_or_404(User, pk=pk)
     obj.kyc_status = "approved"

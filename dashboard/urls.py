@@ -17,6 +17,7 @@ urlpatterns = [
     path("users/<int:pk>/",                     views.user_detail,      name="user_detail"),
     path("users/<int:pk>/edit/",                views.user_edit,        name="user_edit"),
     path("users/<int:pk>/delete/",              views.user_delete,      name="user_delete"),
+    path("users/<int:pk>/toggle-transfer/",      views.user_toggle_transfer, name="user_toggle_transfer"),
     path("users/<int:pk>/approve-kyc/",         views.user_approve_kyc, name="user_approve_kyc"),
     path("users/<int:pk>/reject-kyc/",          views.user_reject_kyc,  name="user_reject_kyc"),
     path("users/<int:pk>/adjust-funds/",        views.user_adjust_funds,name="user_adjust_funds"),

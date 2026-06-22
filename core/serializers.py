@@ -63,11 +63,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "avatar_url", "bio",
             "balance", "roi", "percentage_roi",
             "kyc_status",
+            "allow_transfer",
             "date_joined",
         ]
         read_only_fields = [
             "id", "email", "balance", "roi", "percentage_roi",
-            "kyc_status", "date_joined",
+            "kyc_status", "allow_transfer", "date_joined",
         ]
 
     def get_avatar_url(self, obj):

@@ -241,7 +241,7 @@
 
     <div class="panel-card p-6 mb-6" style="background:#0d2016; border:1px solid #1e3827;">
       <h2 class="text-sm font-semibold uppercase tracking-widest mb-4" style="color:#B0D45A;">Permissions</h2>
-      <div class="grid grid-cols-3 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %} />
           <span class="text-sm" style="color:#f0f0f0;">Active</span>
@@ -253,6 +253,10 @@
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" name="is_superuser" {% if form.is_superuser.value %}checked{% endif %} />
           <span class="text-sm" style="color:#f0f0f0;">Superuser</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer" title="Allows the user to transfer between Deposited and Profit balances">
+          <input type="checkbox" name="allow_transfer" {% if form.allow_transfer.value %}checked{% endif %} />
+          <span class="text-sm font-semibold" style="color:#B0D45A;">Allow Transfer</span>
         </label>
       </div>
     </div>

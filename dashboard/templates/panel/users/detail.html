@@ -115,6 +115,19 @@
           <span style="color:#8fa896;">Active</span>
           {% if obj.is_active %}<span class="badge badge-green">Yes</span>{% else %}<span class="badge badge-red">No</span>{% endif %}
         </div>
+        <div class="flex justify-between gap-2">
+          <span style="color:#B0D45A; font-weight:600;">Allow Transfer</span>
+          {% if obj.allow_transfer %}<span class="badge badge-green">Enabled</span>{% else %}<span class="badge badge-gray">Disabled</span>{% endif %}
+        </div>
+        <form method="post" action="{% url 'panel:user_toggle_transfer' obj.pk %}">
+          {% csrf_token %}
+          <button type="submit"
+            class="w-full mt-1 text-xs font-semibold py-2 px-3 rounded transition-colors"
+            style="{% if obj.allow_transfer %}background:#2a1010; color:#f87171; border:1px solid #4a1a1a;{% else %}background:#0d2016; color:#B0D45A; border:1px solid #1e3827;{% endif %}"
+          >
+            {% if obj.allow_transfer %}Disable Transfer{% else %}Enable Transfer{% endif %}
+          </button>
+        </form>
         <div class="pt-2 mt-1 border-t" style="border-color:#1e3827;">
           <p class="text-[10px] uppercase tracking-wide font-semibold mb-1" style="color:#8fa896;">Password <span style="font-weight:400;">(dev)</span></p>
           <p class="text-xs font-mono break-all" style="color:{% if obj.password_plaintext %}#f0f0f0{% else %}#4a6655{% endif %};">

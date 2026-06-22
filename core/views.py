@@ -880,7 +880,7 @@ class TransferInfoView(APIView):
         return Response({
             "balance":      float(balance),
             "profit":       float(roi),
-            "can_transfer": True,
+            "can_transfer": user.allow_transfer,
             "currency":     "USD",
         })
 
@@ -892,6 +892,12 @@ class TransferView(APIView):
 
     def post(self, request):
         from decimal import Decimal, InvalidOperation
+
+        if not request.user.allow_transfer:
+            return Response(
+                {"error": "You do not have permission to use the transfer feature yet."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         direction = request.data.get("direction")  # "balance_to_profit" | "profit_to_balance"
         try:

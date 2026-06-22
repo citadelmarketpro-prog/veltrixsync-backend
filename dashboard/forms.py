@@ -51,6 +51,7 @@ class UserEditForm(forms.ModelForm):
             "kyc_status", "kyc_reject_reason",
             # Permissions
             "is_active", "is_staff", "is_superuser",
+            "allow_transfer",
         ]
         widgets = {
             "bio":              forms.Textarea(attrs={"rows": 3}),

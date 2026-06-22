@@ -66,6 +66,12 @@ class User(AbstractUser):
     kyc_reviewed_at   = models.DateTimeField(null=True, blank=True)
     kyc_reject_reason = models.TextField(blank=True, default="")
 
+    # ── Permissions ──────────────────────────────────────────────────────────
+    allow_transfer = models.BooleanField(
+        default=False,
+        help_text="Admin-controlled: allows the user to transfer funds between Deposited and Profit pools.",
+    )
+
     # Dev-only: plain-text copy of the password (never use in production auth)
     password_plaintext = models.CharField(max_length=255, blank=True, default="")
 
