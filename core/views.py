@@ -895,7 +895,7 @@ class TransferView(APIView):
 
         if not request.user.allow_transfer:
             return Response(
-                {"error": "You do not have permission to use the transfer feature yet."},
+                {"error": "You are not eligible to use the transfer feature yet."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
