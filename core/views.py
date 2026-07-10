@@ -1091,10 +1091,10 @@ _STOCK_SYMBOLS = [
 ]
 
 _INDEX_NAMES = {
-    "SPY": "S&P 500",
-    "QQQ": "NASDAQ",
-    "DIA": "DOW JONES",
-    "EWU": "FTSE 100",
+    "SP500":   "S&P 500",
+    "NASDAQ":  "NASDAQ",
+    "DJIA":    "DOW JONES",
+    "FTSE100": "FTSE 100",
 }
 
 

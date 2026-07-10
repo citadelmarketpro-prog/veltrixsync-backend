@@ -18,6 +18,14 @@ STOCK_SYMBOLS = [
     "BA", "PFE", "CAT", "WMT",
 ]
 
+# FMP sector names → our frontend filter labels
+SECTOR_NORM = {
+    "Financial Services":     "Finance",
+    "Consumer Cyclical":      "Consumer",
+    "Consumer Defensive":     "Consumer",
+    "Communication Services": "Technology",
+}
+
 
 def _parse_52w(range_str: str):
     """Parse FMP '201.5-317.4' range string → (low, high) Decimals."""
@@ -136,11 +144,14 @@ class Command(BaseCommand):
                 domain  = _domain_from_url(website) if website else ""
 
                 # stable API: "averageVolume" (not "volAvg"), "lastDividend" (not dividendYield%)
+                raw_sector = p.get("sector") or ""
+                sector = SECTOR_NORM.get(raw_sector, raw_sector)
+
                 StockProfile.objects.update_or_create(
                     symbol=sym,
                     defaults={
                         "name":        p.get("companyName") or sym,
-                        "sector":      p.get("sector") or "",
+                        "sector":      sector,
                         "exchange":    p.get("exchange") or p.get("exchangeFullName") or "",
                         "domain":      domain,
                         "logo_url":    p.get("image") or "",
