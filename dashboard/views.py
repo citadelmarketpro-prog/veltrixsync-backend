@@ -14,6 +14,7 @@ from core.models import (
     AdminWallet, CopyRelationship, CopyTrade, Notification, PortfolioAllocation,
     Trader, TraderAsset, TraderPosition, TradeHistory, TraderSection, TraderTag, Transaction,
 )
+from core.email_service import send_user_deposit_approved_email
 from .decorators import superuser_required
 from .forms import (
     AddTradeForm, AdminWalletForm, AdjustFundsForm, EditCopyTradeForm,
@@ -454,6 +455,7 @@ def transaction_approve(request, pk):
         user.save(update_fields=["balance"])
         Notification.objects.create(user=user, notif_type="wallet", title="Deposit Confirmed",
             body=f"Your deposit of ${tx.amount_usd:,.2f} ({tx.asset}) has been confirmed and added to your balance.")
+        send_user_deposit_approved_email(user, tx)
         messages.success(request, f"Deposit approved — ${tx.amount_usd:,.2f} added to {user.email}.")
     else:
         user.balance = max(Decimal("0"), user.balance - tx.amount_usd)

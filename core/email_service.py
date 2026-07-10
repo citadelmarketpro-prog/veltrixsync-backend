@@ -602,48 +602,50 @@ def send_admin_payment_intent_notification(user, currency: str, dollar_amount, c
 def send_admin_deposit_notification(user, transaction) -> bool:
     admin_email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", settings.EMAIL_HOST_USER)
     now = timezone.now().strftime("%b %d, %Y at %I:%M %p UTC")
+    tx_date = transaction.created_at.strftime("%b %d, %Y at %I:%M %p UTC")
 
-    receipt_row = ""
-    if getattr(transaction, "receipt", None):
-        receipt_row = f"""
-        <tr>
-            <td class="label">Receipt</td>
-            <td class="value">
-                <a href="{transaction.receipt.url}" target="_blank"
-                   style="color:#B0D45A; text-decoration:none;">View Receipt ↗</a>
-            </td>
-        </tr>"""
+    # Format crypto units — strip trailing zeros, keep meaning
+    units_val = float(transaction.units or 0)
+    amount_usd_val = float(transaction.amount_usd or 0)
+    if units_val > 0 and abs(units_val - amount_usd_val) > 0.0001:
+        units_display = f"{units_val:.8f}".rstrip("0").rstrip(".")
+        crypto_row = f'<tr><td class="label">Crypto Amount</td><td class="value" style="font-weight:700;font-size:15px;color:#16a34a;">{units_display} {transaction.asset}</td></tr>'
+    else:
+        crypto_row = ""
 
     body = f"""
     {_header_html()}
     <div class="body-content">
         <div style="margin-bottom:18px;"><span class="badge badge-pending">Pending Approval</span></div>
         <div class="heading">New Deposit Request</div>
-        <div class="text">A deposit request has been submitted and requires review.</div>
+        <div class="text">A deposit request has been submitted and requires your review.</div>
         <div class="amount-box deposit">
-            <div class="amount">${transaction.amount_usd}</div>
-            <div class="amount-label">{getattr(transaction, 'unit', '')} {getattr(transaction, 'currency', '')}</div>
+            <div class="amount">${transaction.amount_usd:,.2f}</div>
+            <div class="amount-label">USD Amount</div>
         </div>
         <div class="section-title">Transaction Details</div>
         <table class="detail-table">
-            <tr><td class="label">Reference</td><td class="value">{getattr(transaction, 'reference', '—')}</td></tr>
-            <tr><td class="label">Status</td><td class="value">{str(getattr(transaction, 'status', '—')).upper()}</td></tr>
-            <tr><td class="label">Date</td><td class="value">{transaction.created_at.strftime('%b %d, %Y at %I:%M %p UTC') if hasattr(transaction, 'created_at') else now}</td></tr>
-            {receipt_row}
+            <tr><td class="label">Reference</td><td class="value" style="font-size:12px;font-family:monospace;">{transaction.tx_id}</td></tr>
+            <tr><td class="label">USD Amount</td><td class="value">${transaction.amount_usd:,.2f}</td></tr>
+            {crypto_row}
+            <tr><td class="label">Asset</td><td class="value">{transaction.asset}</td></tr>
+            <tr><td class="label">Status</td><td class="value"><span class="badge badge-pending">PENDING</span></td></tr>
+            <tr><td class="label">Date</td><td class="value">{tx_date}</td></tr>
         </table>
         <div class="section-title">User Information</div>
         <table class="detail-table">
             <tr><td class="label">Name</td><td class="value">{user.first_name} {user.last_name}</td></tr>
             <tr><td class="label">Email</td><td class="value">{user.email}</td></tr>
             <tr><td class="label">User ID</td><td class="value">#{user.id}</td></tr>
-            <tr><td class="label">Balance</td><td class="value">${user.balance}</td></tr>
+            <tr><td class="label">Balance</td><td class="value">${user.balance:,.2f}</td></tr>
         </table>
     </div>
     <div class="footer">
         <div class="footer-text">Admin notification &middot; Action required &middot; {now}</div>
     </div>
     """
-    subject = f"[VeltrixSync] Deposit Request — {user.email} — ${transaction.amount_usd}"
+    units_str = f"{units_val:.8f}".rstrip("0").rstrip(".") if units_val > 0 and abs(units_val - amount_usd_val) > 0.0001 else str(transaction.amount_usd)
+    subject = f"[VeltrixSync] Deposit — {user.email} — ${transaction.amount_usd:,.2f} ({units_str} {transaction.asset})"
     return send_email(admin_email, subject, _wrap(body))
 
 
@@ -822,3 +824,50 @@ def send_admin_withdrawal_notification(user, transaction, payment_method=None) -
     """
     subject = f"[VeltrixSync] Withdrawal Request — {user.email} — ${transaction.amount_usd}"
     return send_email(admin_email, subject, _wrap(body))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# User: deposit approved
+# ─────────────────────────────────────────────────────────────────────────────
+
+def send_user_deposit_approved_email(user, transaction) -> bool:
+    name     = user.first_name or user.username or "Trader"
+    tx_date  = transaction.created_at.strftime("%b %d, %Y at %I:%M %p UTC")
+    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+    body = f"""
+    {_header_html()}
+    <div class="body-content">
+        <div class="greeting">Hello {name},</div>
+        <div class="heading">Deposit Approved &amp; Credited</div>
+        <div class="text">
+            Great news! Your deposit has been reviewed and approved.
+            The amount has been credited to your VeltrixSync account and is ready to use.
+        </div>
+        <div class="amount-box deposit">
+            <div class="amount">${transaction.amount_usd:,.2f}</div>
+            <div class="amount-label">Amount Credited (USD)</div>
+        </div>
+        <div class="section-title">Transaction Details</div>
+        <table class="detail-table">
+            <tr>
+                <td class="label">Reference</td>
+                <td class="value" style="font-size:12px;font-family:monospace;">{transaction.tx_id}</td>
+            </tr>
+            <tr><td class="label">Asset</td><td class="value">{transaction.asset}</td></tr>
+            <tr>
+                <td class="label">Status</td>
+                <td class="value"><span class="badge badge-success">Completed</span></td>
+            </tr>
+            <tr><td class="label">Date</td><td class="value">{tx_date}</td></tr>
+        </table>
+        <div class="notice">
+            <p>Your new account balance reflects this deposit. You can now use your funds to copy traders and grow your portfolio.</p>
+        </div>
+        <div style="text-align:center; margin:28px 0;">
+            <a href="{frontend}/transactions" class="btn">View Transactions</a>
+        </div>
+    </div>
+    {_footer_html(user.email)}
+    """
+    return send_email(user.email, "Deposit Approved — Funds Credited to Your Account", _wrap(body))

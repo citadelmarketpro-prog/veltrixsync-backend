@@ -4,6 +4,7 @@ from .views import (
     ChangePasswordView,
     CopyTradeListView,
     DashboardStatsView,
+    NewsListView,
     PortfolioBreakdownView,
     PortfolioChartView,
     TransferInfoView,

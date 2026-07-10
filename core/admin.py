@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    AdminWallet, CopyRelationship, DummyCopier, Notification, PortfolioAllocation,
+    AdminWallet, CopyRelationship, DummyCopier, News, Notification, PortfolioAllocation,
     TradeHistory, Trader, TraderAsset, TraderPosition, TraderSection,
     TraderTag, Transaction, User, CopyTrade,
 )
@@ -39,6 +39,19 @@ class UserAdmin(admin.ModelAdmin):
             "fields": ("date_joined", "last_login"),
         }),
     )
+
+
+@admin.register(News)
+class NewsAdmin(admin.ModelAdmin):
+    list_display   = ("title_short", "category", "source", "symbol", "published_at", "created_at")
+    list_filter    = ("category",)
+    search_fields  = ("title", "source", "symbol")
+    ordering       = ("-published_at",)
+    readonly_fields = ("created_at",)
+
+    def title_short(self, obj):
+        return obj.title[:80]
+    title_short.short_description = "Title"
 
 
 @admin.register(CopyTrade)

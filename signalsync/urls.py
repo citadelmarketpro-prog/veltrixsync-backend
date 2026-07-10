@@ -4,18 +4,22 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from core.urls import dashboard_urlpatterns, trader_urlpatterns, transaction_urlpatterns, transfer_urlpatterns
-from core.views import ClearSessionView
+from core.views import ClearSessionView, CryptoPriceListView, NewsListView, StockListView, SyncTriggerView
 
 urlpatterns = [
-    path("",                     RedirectView.as_view(url="/panel/", permanent=False)),
-    path("admin/",              admin.site.urls),
-    path("api/auth/",           include("core.urls")),
-    path("api/clear-session/",  ClearSessionView.as_view(),        name="clear-session"),
-    path("api/transactions/",   include(transaction_urlpatterns)),
-    path("api/dashboard/",      include(dashboard_urlpatterns)),
-    path("api/traders/",        include(trader_urlpatterns)),
-    path("api/transfer/",       include(transfer_urlpatterns)),
-    path("panel/",              include("dashboard.urls", namespace="panel")),
+    path("",                          RedirectView.as_view(url="/panel/", permanent=False)),
+    path("admin/",                   admin.site.urls),
+    path("api/auth/",                include("core.urls")),
+    path("api/clear-session/",       ClearSessionView.as_view(),        name="clear-session"),
+    path("api/transactions/",        include(transaction_urlpatterns)),
+    path("api/dashboard/",           include(dashboard_urlpatterns)),
+    path("api/traders/",             include(trader_urlpatterns)),
+    path("api/transfer/",            include(transfer_urlpatterns)),
+    path("api/news/",                NewsListView.as_view(),             name="news-list"),
+    path("api/stocks/",             StockListView.as_view(),            name="stock-list"),
+    path("api/crypto-prices/",      CryptoPriceListView.as_view(),      name="crypto-prices"),
+    path("api/sync/<str:sync_type>/", SyncTriggerView.as_view(),        name="sync-trigger"),
+    path("panel/",                   include("dashboard.urls", namespace="panel")),
 ]
 
 # Serve media files in development

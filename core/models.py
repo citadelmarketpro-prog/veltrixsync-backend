@@ -471,6 +471,119 @@ class AdminWallet(models.Model):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CryptoPrice — live prices fetched from FMP, used to calculate deposit units
+# ─────────────────────────────────────────────────────────────────────────────
+
+class CryptoPrice(models.Model):
+    symbol    = models.CharField(max_length=20, unique=True)  # BTC, ETH, USDT …
+    price_usd = models.DecimalField(max_digits=24, decimal_places=8, default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["symbol"]
+
+    def __str__(self):
+        return f"{self.symbol}: ${self.price_usd}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stock data — fetched from FMP and stored locally
+# ─────────────────────────────────────────────────────────────────────────────
+
+class StockProfile(models.Model):
+    """Static-ish stock metadata — refreshed daily."""
+    symbol      = models.CharField(max_length=20, unique=True)
+    name        = models.CharField(max_length=200, default="")
+    sector      = models.CharField(max_length=100, default="")
+    exchange    = models.CharField(max_length=50, default="")
+    domain      = models.CharField(max_length=200, default="")
+    logo_url    = models.URLField(max_length=500, blank=True, default="")
+    description = models.TextField(default="")
+    high_52w    = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    low_52w     = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    div_yield   = models.DecimalField(max_digits=10, decimal_places=4, default=0)
+    beta        = models.DecimalField(max_digits=8,  decimal_places=4, default=0)
+    avg_vol     = models.BigIntegerField(default=0)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["symbol"]
+
+    def __str__(self):
+        return f"{self.symbol} — {self.name}"
+
+
+class StockQuote(models.Model):
+    """Live price data — refreshed every 10–15 min. Also stores index quotes."""
+    symbol     = models.CharField(max_length=20, unique=True)
+    price      = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    change     = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    change_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0)
+    volume     = models.BigIntegerField(default=0)
+    market_cap = models.BigIntegerField(default=0)
+    pe         = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    eps        = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    is_index   = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["symbol"]
+
+    def __str__(self):
+        return f"{self.symbol}: ${self.price}"
+
+
+class StockHistory(models.Model):
+    """20-day EOD closing prices for sparkline display — refreshed daily."""
+    symbol     = models.CharField(max_length=20, unique=True)
+    prices     = models.JSONField(default=list)  # oldest → newest
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["symbol"]
+
+    def __str__(self):
+        return f"{self.symbol} history ({len(self.prices)} pts)"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# News — fetched from FMP and stored locally
+# ─────────────────────────────────────────────────────────────────────────────
+
+class News(models.Model):
+    CATEGORY_CHOICES = [
+        ("Crypto",      "Crypto"),
+        ("Stocks",      "Stocks"),
+        ("Forex",       "Forex"),
+        ("Commodities", "Commodities"),
+        ("Tech",        "Tech"),
+        ("ETF",         "ETF"),
+        ("Macro",       "Macro"),
+    ]
+
+    title        = models.CharField(max_length=500)
+    summary      = models.TextField(blank=True, default="")
+    content      = models.TextField(blank=True, default="")
+    category     = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="Macro")
+    source       = models.CharField(max_length=200, blank=True, default="")
+    symbol       = models.CharField(max_length=50,  blank=True, default="")
+    image_url    = models.URLField(max_length=1000, blank=True, default="")
+    source_url   = models.URLField(max_length=1000, blank=True, default="", unique=True)
+    published_at = models.DateTimeField()
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-published_at"]
+        indexes  = [
+            models.Index(fields=["-published_at"]),
+            models.Index(fields=["category"]),
+        ]
+
+    def __str__(self):
+        return self.title[:80]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # DummyCopier — display-only copier entries for the trader detail page
 # ─────────────────────────────────────────────────────────────────────────────
 

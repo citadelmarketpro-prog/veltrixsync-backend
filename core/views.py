@@ -18,7 +18,6 @@ from .email_service import (
     send_admin_withdrawal_notification,
     send_password_changed_email,
     send_password_reset_email,
-    send_user_deposit_confirmation,
     send_user_withdrawal_confirmation,
     send_welcome_email,
 )
@@ -548,17 +547,31 @@ class DepositView(APIView):
         wallet     = AdminWallet.objects.get(pk=serializer.validated_data["wallet_id"])
         amount_usd = serializer.validated_data["amount_usd"]
 
+        # Calculate crypto units from live price (falls back to 1:1 if price unavailable)
+        from .models import CryptoPrice
+        from decimal import Decimal
+        try:
+            cp = CryptoPrice.objects.get(symbol=wallet.symbol)
+            units = (amount_usd / cp.price_usd).quantize(Decimal("0.00000001")) if cp.price_usd > 0 else amount_usd
+        except CryptoPrice.DoesNotExist:
+            units = amount_usd
+
         tx = Transaction.objects.create(
             user=request.user,
             tx_type="deposit",
             asset=wallet.symbol,
-            units=amount_usd,         # 1:1 for deposits (no conversion fee)
+            units=units,
             amount_usd=amount_usd,
             status="pending",
         )
 
         send_admin_deposit_notification(request.user, tx)
-        send_user_deposit_confirmation(request.user, tx, wallet_name=wallet.name)
+        Notification.objects.create(
+            user=request.user,
+            notif_type="wallet",
+            title="Deposit Request Received",
+            body=f"Your deposit of ${amount_usd:,.2f} ({wallet.name}) is under review. You will be notified once it is approved.",
+        )
 
         return Response(
             {"detail": "Deposit request submitted.", "tx_id": str(tx.tx_id)},
@@ -971,8 +984,208 @@ class PortfolioChartView(APIView):
         return Response({"points": points})
 
 
+class SyncTriggerView(APIView):
+    """
+    POST /api/sync/news/
+    Protected by X-Sync-Secret header — called by an external cron service.
+    """
+    authentication_classes = []
+    permission_classes     = [AllowAny]
+
+    def post(self, request, sync_type):
+        from decouple import config as _cfg
+        from django.core.management import call_command
+        from io import StringIO
+
+        secret   = request.headers.get("X-Sync-Secret", "")
+        expected = _cfg("SYNC_SECRET", default="")
+        if not expected or secret != expected:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        commands = {
+            "news":          "fetch_fmp_news",
+            "crypto":        "fetch_crypto_prices",
+            "stocks_quotes": "fetch_stock_quotes",
+            "stocks_data":   "fetch_stock_data",
+        }
+        cmd = commands.get(sync_type)
+        if not cmd:
+            return Response(
+                {"error": f"Unknown sync type '{sync_type}'. Valid: {', '.join(commands)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        out = StringIO()
+        try:
+            call_command(cmd, stdout=out)
+            return Response({"status": "ok", "output": out.getvalue()})
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class CryptoPriceListView(APIView):
+    """GET /api/crypto-prices/ -- current prices used by deposit modal for unit display."""
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import CryptoPrice
+        prices = {cp.symbol: float(cp.price_usd) for cp in CryptoPrice.objects.all()}
+        return Response(prices)
+
+
+class NewsListView(APIView):
+    """GET /api/news/ -- public news feed from FMP, stored locally."""
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import News
+
+        category  = request.GET.get("category", "").strip()
+        page      = max(1, int(request.GET.get("page", 1)))
+        page_size = min(50, max(1, int(request.GET.get("page_size", 20))))
+
+        qs = News.objects.all()
+        if category and category != "All":
+            qs = qs.filter(category=category)
+
+        total      = qs.count()
+        offset     = (page - 1) * page_size
+        articles   = qs[offset: offset + page_size]
+        total_pages = max(1, (total + page_size - 1) // page_size)
+
+        results = []
+        for a in articles:
+            results.append({
+                "id":           a.id,
+                "title":        a.title,
+                "summary":      a.summary,
+                "content":      a.content,
+                "category":     a.category,
+                "source":       a.source,
+                "symbol":       a.symbol,
+                "image_url":    a.image_url,
+                "source_url":   a.source_url,
+                "published_at": a.published_at.isoformat(),
+            })
+
+        return Response({
+            "results":     results,
+            "total":       total,
+            "page":        page,
+            "page_size":   page_size,
+            "total_pages": total_pages,
+        })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stock market data
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Ordered list controls display order on the frontend
+_STOCK_SYMBOLS = [
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA",
+    "META", "JPM", "JNJ", "XOM", "NFLX", "V",
+    "BA", "PFE", "CAT", "WMT",
+]
+
+_INDEX_NAMES = {
+    "SPY": "S&P 500",
+    "QQQ": "NASDAQ",
+    "DIA": "DOW JONES",
+    "EWU": "FTSE 100",
+}
+
+
+def _fmt_volume(v: int) -> str:
+    if v >= 1_000_000_000:
+        return f"{v / 1_000_000_000:.1f}B"
+    if v >= 1_000_000:
+        return f"{v / 1_000_000:.1f}M"
+    if v >= 1_000:
+        return f"{v / 1_000:.1f}K"
+    return str(v)
+
+
+def _fmt_market_cap(mc: int) -> str:
+    if mc >= 1_000_000_000_000:
+        return f"{mc / 1_000_000_000_000:.2f}T"
+    if mc >= 1_000_000_000:
+        return f"{mc / 1_000_000_000:.1f}B"
+    if mc >= 1_000_000:
+        return f"{mc / 1_000_000:.1f}M"
+    return str(mc)
+
+
+def _fmt_index_value(price: float) -> str:
+    if price >= 1_000:
+        return f"{price:,.2f}"
+    return f"{price:.2f}"
+
+
+class StockListView(APIView):
+    """GET /api/stocks/ — merged stock quotes + profiles + sparklines + index bar."""
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import StockProfile, StockQuote, StockHistory
+
+        quotes   = {q.symbol: q for q in StockQuote.objects.filter(is_index=False)}
+        profiles = {p.symbol: p for p in StockProfile.objects.all()}
+        histories = {h.symbol: h for h in StockHistory.objects.all()}
+        idx_quotes = {q.symbol: q for q in StockQuote.objects.filter(is_index=True)}
+
+        stocks = []
+        for sym in _STOCK_SYMBOLS:
+            q = quotes.get(sym)
+            if not q:
+                continue
+            p = profiles.get(sym)
+            h = histories.get(sym)
+            # div_yield stores lastDividend (USD per share), not a percentage
+            div_val = float(p.div_yield) if p else 0
+            div_str = f"${div_val:.2f}" if div_val > 0 else "—"
+            stocks.append({
+                "symbol":      sym,
+                "name":        p.name        if p else sym,
+                "sector":      p.sector      if p else "",
+                "exchange":    p.exchange    if p else "",
+                "domain":      p.domain      if p else "",
+                "logo_url":    p.logo_url    if p else "",
+                "description": p.description if p else "",
+                "price":       float(q.price),
+                "change":      float(q.change),
+                "change_pct":  float(q.change_pct),
+                "volume":      _fmt_volume(q.volume),
+                "market_cap":  _fmt_market_cap(q.market_cap),
+                "pe":          float(q.pe) if q.pe is not None else None,
+                "eps":         float(q.eps),
+                "high_52w":    float(p.high_52w) if p else 0,
+                "low_52w":     float(p.low_52w)  if p else 0,
+                "div_yield":   div_str,
+                "beta":        float(p.beta)      if p else 0,
+                "avg_vol":     _fmt_volume(p.avg_vol) if p else "N/A",
+                "sparkline":   h.prices if h else [],
+            })
+
+        indices = []
+        for sym, name in _INDEX_NAMES.items():
+            q = idx_quotes.get(sym)
+            if not q:
+                continue
+            pos = float(q.change) >= 0
+            sign = "+" if pos else ""
+            indices.append({
+                "name":       name,
+                "value":      _fmt_index_value(float(q.price)),
+                "change":     f"{sign}{float(q.change):,.2f}",
+                "change_pct": f"{sign}{float(q.change_pct):.2f}%",
+                "positive":   pos,
+            })
+
+        return Response({"stocks": stocks, "indices": indices})
 
 
 
