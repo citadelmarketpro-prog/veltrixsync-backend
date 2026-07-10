@@ -1,9 +1,9 @@
 """
-Fetch live stock quotes (FMP) + market index values (Yahoo Finance).
-FMP stable API only supports single-symbol calls, so we use ThreadPoolExecutor.
-Indices use Yahoo Finance because FMP stable doesn't support ^GSPC etc.
+Fetch live stock quotes + market index values from FMP.
+FMP stable API only supports single-symbol calls for stocks,
+so we use ThreadPoolExecutor for parallel fetches.
+Indices are fetched from FMP /quotes/index (batch, one call).
 """
-import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from decimal import Decimal, InvalidOperation
 
@@ -18,25 +18,22 @@ STOCK_SYMBOLS = [
     "BA", "PFE", "CAT", "WMT",
 ]
 
-# Internal symbol → Yahoo Finance ticker
-# Stored in DB with is_index=True; matched by _INDEX_NAMES in views.py
-INDEX_CONFIG = [
-    ("SP500",   "^GSPC"),   # S&P 500
-    ("NASDAQ",  "^IXIC"),   # NASDAQ Composite
-    ("DJIA",    "^DJI"),    # Dow Jones Industrial Average
-    ("FTSE100", "^FTSE"),   # FTSE 100
-]
-
-# Old ETF proxy symbols from previous version — delete them on first run
-_OLD_ETF_SYMBOLS = ["SPY", "QQQ", "DIA", "EWU"]
-
-_YF_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    )
+# FMP symbol → internal DB symbol (is_index=True)
+# FMP /quotes/index returns symbols like "^GSPC", "^DJI", "^IXIC", "^FTSE"
+INDEX_FMP_MAP = {
+    "^GSPC":  "SP500",    # S&P 500
+    "^DJI":   "DJIA",     # Dow Jones
+    "^IXIC":  "NASDAQ",   # NASDAQ Composite
+    "^FTSE":  "FTSE100",  # FTSE 100
+    # Without caret — some FMP plans return these without it
+    "GSPC":   "SP500",
+    "DJI":    "DJIA",
+    "IXIC":   "NASDAQ",
+    "FTSE":   "FTSE100",
 }
+
+# Old ETF proxy symbols from previous version — delete on first run
+_OLD_ETF_SYMBOLS = ["SPY", "QQQ", "DIA", "EWU"]
 
 
 def _fetch_quote(sym: str):
@@ -50,47 +47,11 @@ def _fetch_quote(sym: str):
         return sym, None
 
 
-def _fetch_yahoo_index(internal_sym: str, yahoo_sym: str):
-    """
-    Fetch current price + daily change for a market index from Yahoo Finance.
-    Returns (internal_sym, dict|None).
-    """
-    try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_sym}"
-        resp = requests.get(
-            url,
-            params={"range": "2d", "interval": "1d"},
-            headers=_YF_HEADERS,
-            timeout=10,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        result = data["chart"]["result"][0]
-        meta = result["meta"]
-        price = float(meta.get("regularMarketPrice") or 0)
-        prev  = float(
-            meta.get("chartPreviousClose")
-            or meta.get("previousClose")
-            or price
-        )
-        if price <= 0:
-            return internal_sym, None
-        change = price - prev
-        change_pct = (change / prev * 100) if prev else 0
-        return internal_sym, {
-            "price":      price,
-            "change":     change,
-            "change_pct": change_pct,
-        }
-    except Exception:
-        return internal_sym, None
-
-
 class Command(BaseCommand):
-    help = "Fetch live stock quotes (FMP) and index values (Yahoo Finance). Run every 10–15 min."
+    help = "Fetch live stock quotes and index values from FMP. Run every 10–15 min."
 
     def handle(self, *args, **options):
-        # Remove old ETF proxy records from the index section
+        # Remove old ETF proxy records
         deleted, _ = StockQuote.objects.filter(
             symbol__in=_OLD_ETF_SYMBOLS, is_index=True
         ).delete()
@@ -100,7 +61,7 @@ class Command(BaseCommand):
         self._fetch_stock_quotes()
         self._fetch_index_quotes()
 
-    # ── stocks (FMP) ──────────────────────────────────────────────────────────
+    # ── stocks ────────────────────────────────────────────────────────────────
 
     def _fetch_stock_quotes(self):
         quotes = {}
@@ -136,40 +97,61 @@ class Command(BaseCommand):
             self.style.SUCCESS(f"Stock quotes: {updated} updated, {errors} errors")
         )
 
-    # ── indices (Yahoo Finance) ───────────────────────────────────────────────
+    # ── indices ───────────────────────────────────────────────────────────────
 
     def _fetch_index_quotes(self):
-        updated = errors = 0
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = {
-                pool.submit(_fetch_yahoo_index, sym, yahoo): sym
-                for sym, yahoo in INDEX_CONFIG
-            }
-            for future in as_completed(futures):
-                sym, data = future.result()
-                if not data:
-                    self.stderr.write(f"Index fetch failed: {sym}")
-                    errors += 1
+        try:
+            all_indices = fmp_client.fmp_get("/quotes/index")
+        except Exception as exc:
+            self.stderr.write(f"Index fetch failed: {exc}")
+            return
+
+        if not isinstance(all_indices, list):
+            self.stderr.write(f"Unexpected index response: {type(all_indices)}")
+            return
+
+        updated = errors = skipped = 0
+        seen = set()
+
+        for item in all_indices:
+            fmp_sym = item.get("symbol", "")
+            internal = INDEX_FMP_MAP.get(fmp_sym)
+            if not internal or internal in seen:
+                continue
+            seen.add(internal)
+
+            try:
+                price = float(item.get("price") or 0)
+                if price <= 0:
+                    skipped += 1
                     continue
-                try:
-                    StockQuote.objects.update_or_create(
-                        symbol=sym,
-                        defaults={
-                            "price":      Decimal(str(data["price"])),
-                            "change":     Decimal(str(data["change"])),
-                            "change_pct": Decimal(str(data["change_pct"])),
-                            "volume":     0,
-                            "market_cap": 0,
-                            "pe":         None,
-                            "eps":        Decimal("0"),
-                            "is_index":   True,
-                        },
-                    )
-                    updated += 1
-                except (InvalidOperation, Exception) as exc:
-                    self.stderr.write(f"Error saving index {sym}: {exc}")
-                    errors += 1
+                StockQuote.objects.update_or_create(
+                    symbol=internal,
+                    defaults={
+                        "price":      Decimal(str(price)),
+                        "change":     Decimal(str(item.get("change") or 0)),
+                        "change_pct": Decimal(str(item.get("changePercentage") or 0)),
+                        "volume":     int(item.get("volume") or 0),
+                        "market_cap": 0,
+                        "pe":         None,
+                        "eps":        Decimal("0"),
+                        "is_index":   True,
+                    },
+                )
+                updated += 1
+            except (InvalidOperation, Exception) as exc:
+                self.stderr.write(f"Error saving index {internal}: {exc}")
+                errors += 1
+
+        if not seen:
+            self.stderr.write(
+                "No matching index symbols found in FMP response. "
+                f"Got {len(all_indices)} items. "
+                "Symbols we look for: ^GSPC, ^DJI, ^IXIC, ^FTSE"
+            )
 
         self.stdout.write(
-            self.style.SUCCESS(f"Index quotes: {updated} updated, {errors} errors")
+            self.style.SUCCESS(
+                f"Index quotes: {updated} updated, {errors} errors, {skipped} skipped"
+            )
         )
