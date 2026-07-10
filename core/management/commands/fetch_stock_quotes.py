@@ -100,14 +100,30 @@ class Command(BaseCommand):
     # ── indices ───────────────────────────────────────────────────────────────
 
     def _fetch_index_quotes(self):
+        # Try FMP v3 /quotes/index (batch, one call, real index values)
+        all_indices = []
         try:
-            all_indices = fmp_client.fmp_get("/quotes/index")
+            data = fmp_client.fmp_get_v3("/quotes/index")
+            if isinstance(data, list):
+                all_indices = data
         except Exception as exc:
-            self.stderr.write(f"Index fetch failed: {exc}")
-            return
+            self.stderr.write(f"v3 /quotes/index failed: {exc}")
 
-        if not isinstance(all_indices, list):
-            self.stderr.write(f"Unexpected index response: {type(all_indices)}")
+        # Fallback: individual stable /quote calls with ^ symbols
+        if not all_indices:
+            self.stderr.write("Falling back to individual index symbol calls...")
+            for fmp_sym in INDEX_FMP_MAP:
+                if not fmp_sym.startswith("^"):
+                    continue
+                try:
+                    data = fmp_client.fmp_get("/quote", {"symbol": fmp_sym})
+                    if isinstance(data, list):
+                        all_indices.extend(data)
+                except Exception:
+                    pass
+
+        if not all_indices:
+            self.stderr.write("All index fetch attempts failed.")
             return
 
         updated = errors = skipped = 0
@@ -130,7 +146,9 @@ class Command(BaseCommand):
                     defaults={
                         "price":      Decimal(str(price)),
                         "change":     Decimal(str(item.get("change") or 0)),
-                        "change_pct": Decimal(str(item.get("changePercentage") or 0)),
+                        "change_pct": Decimal(
+                            str(item.get("changePercentage") or item.get("changesPercentage") or 0)
+                        ),
                         "volume":     int(item.get("volume") or 0),
                         "market_cap": 0,
                         "pe":         None,
@@ -145,9 +163,8 @@ class Command(BaseCommand):
 
         if not seen:
             self.stderr.write(
-                "No matching index symbols found in FMP response. "
-                f"Got {len(all_indices)} items. "
-                "Symbols we look for: ^GSPC, ^DJI, ^IXIC, ^FTSE"
+                f"No matching index symbols in FMP response ({len(all_indices)} items). "
+                "Expected ^GSPC, ^DJI, ^IXIC, ^FTSE."
             )
 
         self.stdout.write(

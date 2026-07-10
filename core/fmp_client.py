@@ -1,7 +1,8 @@
 import requests
 from decouple import config
 
-FMP_BASE = "https://financialmodelingprep.com/stable"
+FMP_BASE    = "https://financialmodelingprep.com/stable"
+FMP_BASE_V3 = "https://financialmodelingprep.com/api/v3"
 _API_KEY = None
 
 
@@ -14,6 +15,16 @@ def _key():
 
 def fmp_get(endpoint, params=None):
     url = f"{FMP_BASE}{endpoint}"
+    p = {"apikey": _key()}
+    if params:
+        p.update(params)
+    resp = requests.get(url, params=p, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def fmp_get_v3(endpoint, params=None):
+    url = f"{FMP_BASE_V3}{endpoint}"
     p = {"apikey": _key()}
     if params:
         p.update(params)
