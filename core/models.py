@@ -359,6 +359,7 @@ class CopyTrade(models.Model):
     trader            = models.ForeignKey("Trader", on_delete=models.SET_NULL, null=True, blank=True, related_name="investor_trades")
     asset             = models.CharField(max_length=100)
     asset_type        = models.CharField(max_length=10, choices=TYPE_CHOICES, default="stock")
+    asset_logo        = models.URLField(max_length=500, blank=True, default="")
     direction         = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default="Buy")
     entry             = models.DecimalField(max_digits=18, decimal_places=2, default=0)   # entry price
     earning_pct       = models.DecimalField(max_digits=8,  decimal_places=2, default=0)   # % entered by admin

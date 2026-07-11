@@ -515,7 +515,7 @@ class CopyTradeSerializer(serializers.ModelSerializer):
     class Meta:
         model  = CopyTrade
         fields = [
-            "id", "trader_name", "asset", "asset_type",
+            "id", "trader_name", "asset", "asset_type", "asset_logo",
             "direction", "entry", "earning_pct",
             "pnl", "pnl_display", "pnl_positive",
             "duration", "status", "created_at",

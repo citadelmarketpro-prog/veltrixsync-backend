@@ -49,24 +49,10 @@
       <input type="hidden" name="user_ids" value="{{ uid }}" />
       {% endfor %}
 
-      <!-- Type -->
+      <!-- Market / Asset combobox -->
       <div class="mb-4">
-        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Type</label>
-        <select name="asset_type" id="id_asset_type" class="form-control" onchange="updateAssets()">
-          <option value="">— Select type —</option>
-          <option value="stock"  {% if form.asset_type.value == "stock"  %}selected{% endif %}>Stock</option>
-          <option value="crypto" {% if form.asset_type.value == "crypto" %}selected{% endif %}>Crypto</option>
-          <option value="forex"  {% if form.asset_type.value == "forex"  %}selected{% endif %}>Forex</option>
-        </select>
-        {% if form.asset_type.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.asset_type.errors.0 }}</p>{% endif %}
-      </div>
-
-      <!-- Asset -->
-      <div class="mb-4">
-        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Asset</label>
-        <select name="asset" id="id_asset" class="form-control">
-          <option value="">— Select type first —</option>
-        </select>
+        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#8fa896;">Market / Asset</label>
+        {{ form.asset }}
         {% if form.asset.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ form.asset.errors.0 }}</p>{% endif %}
       </div>
 
@@ -212,32 +198,4 @@
   {% endif %}
 </div>
 
-<script>
-const ASSET_MAP  = {{ asset_map_json|safe }};
-const PREV_ASSET = "{{ form.asset.value|default:'' }}";
-
-function updateAssets() {
-  const type   = document.getElementById("id_asset_type").value;
-  const select = document.getElementById("id_asset");
-  select.innerHTML = "";
-
-  if (!type) {
-    select.innerHTML = '<option value="">— Select type first —</option>';
-    return;
-  }
-
-  (ASSET_MAP[type] || []).forEach(function(a) {
-    const opt       = document.createElement("option");
-    opt.value       = a;
-    opt.textContent = a;
-    if (a === PREV_ASSET) opt.selected = true;
-    select.appendChild(opt);
-  });
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-  const typeEl = document.getElementById("id_asset_type");
-  if (typeEl.value) updateAssets();
-});
-</script>
 {% endblock %}

@@ -67,6 +67,9 @@ urlpatterns = [
     path("copy-trades/<int:pk>/approve-cancel/",          views.copy_trade_approve_cancel, name="copy_trade_approve_cancel"),
     path("copy-trades/<int:pk>/reject-cancel/",           views.copy_trade_reject_cancel,  name="copy_trade_reject_cancel"),
 
+    # FMP asset search API
+    path("api/fmp-search/", views.panel_fmp_search, name="fmp_search"),
+
     # Investors
     path("investors/",                               views.investor_list,           name="investor_list"),
     path("investors/trades/",                        views.all_trade_records,       name="all_trade_records"),

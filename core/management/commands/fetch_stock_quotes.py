@@ -13,9 +13,19 @@ from core.models import StockQuote
 from core import fmp_client
 
 STOCK_SYMBOLS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA",
-    "META", "JPM", "JNJ", "XOM", "NFLX", "V",
-    "BA", "PFE", "CAT", "WMT",
+    # Technology
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX",
+    "AMD", "ORCL", "CSCO", "ADBE", "INTC", "QCOM", "AVGO", "CRM",
+    # Finance
+    "JPM", "BAC", "GS", "V", "MA", "WFC", "BLK", "AXP", "MS", "C",
+    # Healthcare
+    "JNJ", "PFE", "UNH", "LLY", "ABBV", "MRK", "AMGN", "ABT", "TMO", "CVS",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "EOG", "OXY",
+    # Consumer
+    "WMT", "COST", "HD", "MCD", "NKE", "DIS", "KO", "PG", "SBUX", "TGT",
+    # Industrials
+    "BA", "CAT", "GE", "RTX", "HON", "UPS", "DE", "MMM",
 ]
 
 # FMP symbol → internal DB symbol (is_index=True)
@@ -100,21 +110,29 @@ class Command(BaseCommand):
     # ── indices ───────────────────────────────────────────────────────────────
 
     def _fetch_index_quotes(self):
-        # Try FMP v3 /quotes/index (batch, one call, real index values)
         all_indices = []
+
+        # Attempt 1: stable batch — comma-separated caret symbols
         try:
-            data = fmp_client.fmp_get_v3("/quotes/index")
-            if isinstance(data, list):
+            data = fmp_client.fmp_get("/quote", {"symbol": "^GSPC,^DJI,^IXIC,^FTSE"})
+            if isinstance(data, list) and data:
                 all_indices = data
         except Exception as exc:
-            self.stderr.write(f"v3 /quotes/index failed: {exc}")
+            self.stderr.write(f"Stable batch index failed: {exc}")
 
-        # Fallback: individual stable /quote calls with ^ symbols
+        # Attempt 2: FMP v3 /quotes/index (requires Starter+ plan)
+        if not all_indices:
+            try:
+                data = fmp_client.fmp_get_v3("/quotes/index")
+                if isinstance(data, list) and data:
+                    all_indices = data
+            except Exception as exc:
+                self.stderr.write(f"v3 /quotes/index failed: {exc}")
+
+        # Attempt 3: individual stable /quote calls per symbol
         if not all_indices:
             self.stderr.write("Falling back to individual index symbol calls...")
-            for fmp_sym in INDEX_FMP_MAP:
-                if not fmp_sym.startswith("^"):
-                    continue
+            for fmp_sym in ("^GSPC", "^DJI", "^IXIC", "^FTSE"):
                 try:
                     data = fmp_client.fmp_get("/quote", {"symbol": fmp_sym})
                     if isinstance(data, list):

@@ -33,6 +33,20 @@ def fmp_get_v3(endpoint, params=None):
     return resp.json()
 
 
+def search_symbols(query: str, limit: int = 15) -> list:
+    """Search FMP for assets matching a query. Returns [{symbol, name}, ...]."""
+    try:
+        results = fmp_get("/search-symbol", {"query": query, "limit": limit})
+        if isinstance(results, list):
+            return [
+                {"symbol": r.get("symbol", ""), "name": r.get("name", "")}
+                for r in results if r.get("symbol")
+            ]
+    except Exception:
+        pass
+    return []
+
+
 def get_crypto_quotes():
     """
     Fetch all crypto quotes in one call.

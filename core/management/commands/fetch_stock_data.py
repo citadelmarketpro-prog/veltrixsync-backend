@@ -13,9 +13,19 @@ from core.models import StockHistory, StockProfile
 from core import fmp_client
 
 STOCK_SYMBOLS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA",
-    "META", "JPM", "JNJ", "XOM", "NFLX", "V",
-    "BA", "PFE", "CAT", "WMT",
+    # Technology
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX",
+    "AMD", "ORCL", "CSCO", "ADBE", "INTC", "QCOM", "AVGO", "CRM",
+    # Finance
+    "JPM", "BAC", "GS", "V", "MA", "WFC", "BLK", "AXP", "MS", "C",
+    # Healthcare
+    "JNJ", "PFE", "UNH", "LLY", "ABBV", "MRK", "AMGN", "ABT", "TMO", "CVS",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "EOG", "OXY",
+    # Consumer
+    "WMT", "COST", "HD", "MCD", "NKE", "DIS", "KO", "PG", "SBUX", "TGT",
+    # Industrials
+    "BA", "CAT", "GE", "RTX", "HON", "UPS", "DE", "MMM",
 ]
 
 # FMP sector names → our frontend filter labels

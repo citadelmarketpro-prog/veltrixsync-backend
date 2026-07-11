@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -15,6 +16,7 @@ from core.models import (
     Trader, TraderAsset, TraderPosition, TradeHistory, TraderSection, TraderTag, Transaction,
 )
 from core.email_service import send_user_deposit_approved_email
+from core.fmp_client import search_symbols
 from .decorators import superuser_required
 from .forms import (
     AddTradeForm, AdminWalletForm, AdjustFundsForm, EditCopyTradeForm,
@@ -586,6 +588,16 @@ def investor_list(request):
     return render(request, "panel/investors/list.html", {"page_obj": page, "q": q})
 
 
+@superuser_required
+def panel_fmp_search(request):
+    """Return JSON list of {symbol, name} from FMP symbol search."""
+    q = request.GET.get("q", "").strip()
+    if not q or len(q) < 1:
+        return JsonResponse([], safe=False)
+    results = search_symbols(q, limit=20)
+    return JsonResponse(results, safe=False)
+
+
 def _apply_trade(user, cd):
     """Create a CopyTrade and update the user's roi/percentage_roi."""
     balance     = user.balance or Decimal("0")
@@ -596,10 +608,21 @@ def _apply_trade(user, cd):
     user.percentage_roi = (user.percentage_roi or Decimal("0")) + earning_pct
     user.save(update_fields=["roi", "percentage_roi"])
 
+    asset = cd["asset"]
+    _crypto_syms = set(ASSET_MAP.get("crypto", []))
+    _forex_syms  = set(ASSET_MAP.get("forex",  []))
+    # Known lists first; then pattern-match for FMP assets not in the local map
+    if asset in _crypto_syms:
+        inferred_type = "crypto"
+    elif asset in _forex_syms or "/" in asset:
+        inferred_type = "forex"
+    else:
+        inferred_type = "stock"
     return CopyTrade.objects.create(
         user        = user,
-        asset       = cd["asset"],
-        asset_type  = cd["asset_type"],
+        asset       = asset,
+        asset_type  = inferred_type,
+        asset_logo  = f"https://images.financialmodelingprep.com/symbol/{asset}.png",
         direction   = cd["direction"],
         entry       = cd["entry"],
         earning_pct = earning_pct,
@@ -627,8 +650,7 @@ def investor_add_trade(request, user_pk):
         "form": form,
         "inv_user": user,
         "trades": trades,
-        "asset_map_json":  json.dumps(ASSET_MAP),
-        "asset_icon_map":  ASSET_ICON_MAP,
+        "asset_icon_map": ASSET_ICON_MAP,
     })
 
 
@@ -644,7 +666,7 @@ def investor_bulk_add_trade(request):
 
     all_trades = CopyTrade.objects.select_related("user", "trader").order_by("-created_at")
 
-    form = AddTradeForm(request.POST if request.method == "POST" and "asset_type" in request.POST else None)
+    form = AddTradeForm(request.POST if request.method == "POST" and "asset" in request.POST else None)
     if form.is_valid():
         count = 0
         for user in users:
@@ -662,7 +684,6 @@ def investor_bulk_add_trade(request):
         "users": users,
         "user_ids": user_ids,
         "all_trades": all_trades,
-        "asset_map_json": json.dumps(ASSET_MAP),
         "asset_icon_map": ASSET_ICON_MAP,
     })
 
