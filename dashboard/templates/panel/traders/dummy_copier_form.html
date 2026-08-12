@@ -1,0 +1,27 @@
+{% extends "panel/base.html" %}
+{% block title %}{% if editing %}Edit{% else %}Add{% endif %} Demo Copier — {{ obj.name }}{% endblock %}
+{% block heading %}{% if editing %}Edit{% else %}Add{% endif %} Demo Copier{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / {% if editing %}Edit{% else %}Add{% endif %} Demo Copier{% endblock %}
+{% block content %}
+<div class="max-w-sm">
+  <div class="panel-card p-6">
+    <p class="text-xs mb-5" style="color:#8fa896;">
+      Display-only — shown in the "Copiers" tab on the public trader page. Not linked to any real user account.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="mb-4">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ field.errors|join:", " }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">{% if editing %}Save{% else %}Add{% endif %}</button>
+        <a href="{% url 'panel:trader_detail' obj.pk %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

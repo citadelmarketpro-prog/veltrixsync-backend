@@ -4,6 +4,7 @@ from decouple import config
 FMP_BASE    = "https://financialmodelingprep.com/stable"
 FMP_BASE_V3 = "https://financialmodelingprep.com/api/v3"
 _API_KEY = None
+_session = None
 
 
 def _key():
@@ -13,12 +14,22 @@ def _key():
     return _API_KEY
 
 
+def _get_session() -> requests.Session:
+    """Shared, process-wide session so repeated calls (e.g. fetching several
+    single-symbol quotes in a row) reuse one TCP/TLS connection instead of
+    paying a fresh handshake every time — cuts per-call latency drastically."""
+    global _session
+    if _session is None:
+        _session = requests.Session()
+    return _session
+
+
 def fmp_get(endpoint, params=None):
     url = f"{FMP_BASE}{endpoint}"
     p = {"apikey": _key()}
     if params:
         p.update(params)
-    resp = requests.get(url, params=p, timeout=15)
+    resp = _get_session().get(url, params=p, timeout=15)
     resp.raise_for_status()
     return resp.json()
 
@@ -28,7 +39,7 @@ def fmp_get_v3(endpoint, params=None):
     p = {"apikey": _key()}
     if params:
         p.update(params)
-    resp = requests.get(url, params=p, timeout=15)
+    resp = _get_session().get(url, params=p, timeout=15)
     resp.raise_for_status()
     return resp.json()
 

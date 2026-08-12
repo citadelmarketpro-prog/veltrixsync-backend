@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 from cloudinary.models import CloudinaryField
 
 
@@ -261,7 +262,9 @@ class TraderPosition(models.Model):
     value      = models.DecimalField(max_digits=8,  decimal_places=2, default=0)
     sell_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     buy_price  = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    opened_at  = models.DateTimeField(auto_now_add=True)
+    # Was auto_now_add — switched to a plain default so seed data can backdate
+    # this to a realistic recent date; manual creates still default to "now".
+    opened_at  = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["-opened_at"]

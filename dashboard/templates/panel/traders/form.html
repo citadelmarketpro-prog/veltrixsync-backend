@@ -1,4 +1,5 @@
 {% extends "panel/base.html" %}
+{% load dict_extras %}
 {% block title %}{{ action }} Trader — VeltrixSync Admin{% endblock %}
 {% block heading %}{{ action }} Trader{% endblock %}
 {% block breadcrumb %}<a href="{% url 'panel:trader_list' %}" style="color:#B0D45A;">Traders</a> / {% if obj %}<a href="{% url 'panel:trader_detail' obj.pk %}" style="color:#B0D45A;">{{ obj.name }}</a> / {% endif %}{{ action }}{% endblock %}
@@ -78,12 +79,115 @@
         </div>
       </div>
 
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-1 pb-2 border-b mt-4" style="color:#8fa896; border-color:#1e3827;">Portfolio Allocation</h3>
+      <p class="text-xs mb-3" style="color:#8fa896;">
+        {% if obj %}
+          Adjust percentages, add rows, or tick "Remove" to delete one — saved together with the rest of this form.
+        {% else %}
+          Optional — set this trader's allocation breakdown now, or leave every row blank and add it later from the trader's page.
+        {% endif %}
+        Use "+ Add Allocation Row" below for as many as you need.
+      </p>
+      <div class="mb-6 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+        {{ allocation_fs.management_form }}
+        {% if allocation_fs.non_form_errors %}
+          <div class="flash-msg flash-error mb-3">{{ allocation_fs.non_form_errors }}</div>
+        {% endif %}
+        <div id="alloc-rows">
+          {% for alloc_form in allocation_fs %}
+            <div class="alloc-row grid grid-cols-12 gap-2 items-end mb-3 pb-3" style="border-bottom:1px solid #1e3827;">
+              {{ alloc_form.id }}
+              <div class="col-span-4">
+                <label class="form-label">Label</label>
+                {{ alloc_form.label }}
+                {% for err in alloc_form.label.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+              </div>
+              <div class="col-span-3 md:col-span-2">
+                <label class="form-label">Percent</label>
+                {{ alloc_form.pct }}
+                {% for err in alloc_form.pct.errors %}<p class="text-xs mt-1" style="color:#f87171;">{{ err }}</p>{% endfor %}
+              </div>
+              <div class="col-span-2">
+                <label class="form-label">Color</label>
+                {{ alloc_form.color }}
+              </div>
+              <div class="col-span-2">
+                <label class="form-label">Order</label>
+                {{ alloc_form.order }}
+              </div>
+              <div class="col-span-1 md:col-span-2 flex justify-end" style="padding-bottom:10px;">
+                {% if alloc_form.instance.pk %}
+                <label class="flex items-center gap-1 cursor-pointer" title="Remove this allocation">
+                  {{ alloc_form.DELETE }}
+                  <span class="text-xs" style="color:#f87171;">Del</span>
+                </label>
+                {% else %}
+                <button type="button" class="alloc-remove-row text-xs" style="color:#f87171; background:none; border:none; cursor:pointer;" title="Remove this row">✕ Remove</button>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <button type="button" id="alloc-add-row" class="btn btn-ghost" style="padding:6px 14px; font-size:12px;">+ Add Allocation Row</button>
+      </div>
+
+      <template id="alloc-empty-form-template">
+        <div class="alloc-row grid grid-cols-12 gap-2 items-end mb-3 pb-3" style="border-bottom:1px solid #1e3827;">
+          {{ allocation_fs.empty_form.id }}
+          <div class="col-span-4">
+            <label class="form-label">Label</label>
+            {{ allocation_fs.empty_form.label }}
+          </div>
+          <div class="col-span-3 md:col-span-2">
+            <label class="form-label">Percent</label>
+            {{ allocation_fs.empty_form.pct }}
+          </div>
+          <div class="col-span-2">
+            <label class="form-label">Color</label>
+            {{ allocation_fs.empty_form.color }}
+          </div>
+          <div class="col-span-2">
+            <label class="form-label">Order</label>
+            {{ allocation_fs.empty_form.order }}
+          </div>
+          <div class="col-span-1 md:col-span-2 flex justify-end" style="padding-bottom:10px;">
+            <button type="button" class="alloc-remove-row text-xs" style="color:#f87171; background:none; border:none; cursor:pointer;" title="Remove this row">✕ Remove</button>
+          </div>
+        </div>
+      </template>
+      <script>
+      (function() {
+        var addBtn   = document.getElementById('alloc-add-row');
+        var rows     = document.getElementById('alloc-rows');
+        var template = document.getElementById('alloc-empty-form-template');
+        var totalForms = document.querySelector('input[name="alloc-TOTAL_FORMS"]');
+        if (!addBtn || !rows || !template || !totalForms) return;
+
+        function bindRemove(row) {
+          var btn = row.querySelector('.alloc-remove-row');
+          if (btn) btn.addEventListener('click', function() { row.remove(); });
+        }
+        rows.querySelectorAll('.alloc-row').forEach(bindRemove);
+
+        addBtn.addEventListener('click', function() {
+          var idx  = parseInt(totalForms.value, 10);
+          var html = template.innerHTML.split('__prefix__').join(idx);
+          var wrap = document.createElement('div');
+          wrap.innerHTML = html.trim();
+          var row = wrap.firstElementChild;
+          rows.appendChild(row);
+          bindRemove(row);
+          totalForms.value = idx + 1;
+        });
+      })();
+      </script>
+
       <h3 class="text-xs font-semibold uppercase tracking-widest mb-3 pb-2 border-b mt-4" style="color:#8fa896; border-color:#1e3827;">Tags</h3>
       <div class="flex flex-wrap gap-3 mb-6 p-4 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
         {% for val, label in form.trader_tags.field.choices %}
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" name="trader_tags" value="{{ val }}"
-            {% if val|stringformat:"s" in form.trader_tags.value|default_if_none:"" %}checked{% endif %}
+            {% if val|str_in:form.trader_tags.value %}checked{% endif %}
             style="accent-color:#B0D45A;" />
           <span class="text-sm" style="color:#f0f0f0;">{{ label }}</span>
         </label>

@@ -12,15 +12,17 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from core.models import (
-    AdminWallet, CopyRelationship, CopyTrade, Notification, PortfolioAllocation,
+    AdminWallet, CopyRelationship, CopyTrade, DummyCopier, Notification, PortfolioAllocation,
     Trader, TraderAsset, TraderPosition, TradeHistory, TraderSection, TraderTag, Transaction,
 )
-from core.email_service import send_user_deposit_approved_email
+from core.email_service import send_user_deposit_approved_email, send_custom_email, render_custom_email_preview
 from core.fmp_client import search_symbols
 from .decorators import superuser_required
+from .models import EmailCampaign, EmailCampaignRecipient
+from .trader_seed import seed_trader_demo_data, assign_default_section
 from .forms import (
-    AddTradeForm, AdminWalletForm, AdjustFundsForm, EditCopyTradeForm,
-    PortfolioAllocationForm, RejectKycForm, TraderAssetForm, TradeHistoryForm,
+    AddTradeForm, AdminWalletForm, AdjustFundsForm, CustomEmailForm, DummyCopierForm, EditCopyTradeForm,
+    PortfolioAllocationForm, PortfolioAllocationFormSet, RejectKycForm, TraderAssetForm, TradeHistoryForm,
     TraderForm, TraderPositionForm, TraderSectionForm, TraderTagForm,
     UserCreateForm, UserEditForm,
     ASSET_MAP, ASSET_ICON_MAP,
@@ -202,40 +204,58 @@ def trader_list(request):
 
 @superuser_required
 def trader_create(request):
-    form = TraderForm(request.POST or None, request.FILES or None)
-    if form.is_valid():
+    form          = TraderForm(request.POST or None, request.FILES or None)
+    allocation_fs = PortfolioAllocationFormSet(request.POST or None, prefix="alloc")
+    if form.is_valid() and allocation_fs.is_valid():
         trader = form.save()
-        messages.success(request, f"Trader '{trader.name}' created.")
+        allocation_fs.instance = trader
+        allocation_fs.save()
+        # Portfolio Allocation is the one section the admin can set by hand right
+        # here — everything else (assets/positions/history/copiers) is always
+        # auto-generated so the trader isn't left empty.
+        seed_trader_demo_data(trader, seed_allocations=False)
+        assign_default_section(trader)
+        messages.success(request, f"Trader '{trader.name}' created with sample portfolio data — edit or remove any of it from the trader's page.")
         return redirect("panel:trader_detail", pk=trader.pk)
-    return render(request, "panel/traders/form.html", {"form": form, "action": "Create"})
+    return render(request, "panel/traders/form.html", {
+        "form": form, "action": "Create", "allocation_fs": allocation_fs,
+    })
 
 
 @superuser_required
 def trader_detail(request, pk):
     t = get_object_or_404(Trader, pk=pk)
-    all_rels = CopyRelationship.objects.filter(trader=t).select_related("copier")
+    all_rels       = CopyRelationship.objects.filter(trader=t).select_related("copier")
+    active_copiers = all_rels.filter(status="active")
+    dummy_copiers  = t.dummy_copiers.all()
     return render(request, "panel/traders/detail.html", {
-        "obj":             t,
-        "sections":        t.section_memberships.all(),
-        "assets":          t.trader_assets.all(),
-        "allocs":          t.portfolio_allocations.all(),
-        "copiers":         all_rels.filter(status="active"),
-        "cancel_requests": all_rels.filter(status="cancel_requested"),
-        "tags":            t.trader_tags.all(),
-        "positions":       t.positions.all(),
-        "history":         t.trade_history.all(),
+        "obj":                t,
+        "sections":           t.section_memberships.all(),
+        "assets":             t.trader_assets.all(),
+        "allocs":             t.portfolio_allocations.all(),
+        "copiers":            active_copiers,
+        "cancel_requests":    all_rels.filter(status="cancel_requested"),
+        "tags":               t.trader_tags.all(),
+        "positions":          t.positions.all(),
+        "history":            t.trade_history.all(),
+        "dummy_copiers":      dummy_copiers,
+        "total_copiers_count": active_copiers.count() + dummy_copiers.count(),
     })
 
 
 @superuser_required
 def trader_edit(request, pk):
-    trader = get_object_or_404(Trader, pk=pk)
-    form   = TraderForm(request.POST or None, request.FILES or None, instance=trader)
-    if form.is_valid():
+    trader        = get_object_or_404(Trader, pk=pk)
+    form          = TraderForm(request.POST or None, request.FILES or None, instance=trader)
+    allocation_fs = PortfolioAllocationFormSet(request.POST or None, instance=trader, prefix="alloc")
+    if form.is_valid() and allocation_fs.is_valid():
         form.save()
+        allocation_fs.save()
         messages.success(request, "Trader updated.")
         return redirect("panel:trader_detail", pk=pk)
-    return render(request, "panel/traders/form.html", {"form": form, "obj": trader, "action": "Edit"})
+    return render(request, "panel/traders/form.html", {
+        "form": form, "obj": trader, "action": "Edit", "allocation_fs": allocation_fs,
+    })
 
 
 @superuser_required
@@ -350,6 +370,42 @@ def trader_delete_allocation(request, pk, alloc_pk):
     alloc = get_object_or_404(PortfolioAllocation, pk=alloc_pk, trader_id=pk)
     alloc.delete()
     messages.success(request, "Allocation deleted.")
+    return redirect("panel:trader_detail", pk=pk)
+
+
+# ── Demo Copiers (DummyCopier — display-only, no link to real accounts) ──────
+
+@superuser_required
+def trader_add_dummy_copier(request, pk):
+    trader = get_object_or_404(Trader, pk=pk)
+    form   = DummyCopierForm(request.POST or None)
+    if form.is_valid():
+        c = form.save(commit=False)
+        c.trader = trader
+        c.save()
+        messages.success(request, "Demo copier added.")
+        return redirect("panel:trader_detail", pk=pk)
+    return render(request, "panel/traders/dummy_copier_form.html", {"form": form, "obj": trader})
+
+
+@superuser_required
+def trader_edit_dummy_copier(request, pk, copier_pk):
+    trader = get_object_or_404(Trader, pk=pk)
+    copier = get_object_or_404(DummyCopier, pk=copier_pk, trader=trader)
+    form   = DummyCopierForm(request.POST or None, instance=copier)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Demo copier updated.")
+        return redirect("panel:trader_detail", pk=pk)
+    return render(request, "panel/traders/dummy_copier_form.html", {"form": form, "obj": trader, "editing": True})
+
+
+@superuser_required
+@require_POST
+def trader_delete_dummy_copier(request, pk, copier_pk):
+    copier = get_object_or_404(DummyCopier, pk=copier_pk, trader_id=pk)
+    copier.delete()
+    messages.success(request, "Demo copier deleted.")
     return redirect("panel:trader_detail", pk=pk)
 
 
@@ -581,7 +637,7 @@ def investor_list(request):
         trader_count=Count("copying", distinct=True),
         active_count=Count("copying", filter=Q(copying__status="active"), distinct=True),
         cancel_count=Count("copying", filter=Q(copying__status="cancel_requested"), distinct=True),
-    ).order_by("-date_joined")
+    ).order_by("-date_joined").prefetch_related("copying__trader")
     if q:
         qs = qs.filter(Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))
     page = Paginator(qs, 30).get_page(request.GET.get("page"))
@@ -788,4 +844,140 @@ def tag_delete(request, pk):
         "subtitle": tag.name,
         "warning": "This tag will be removed from all traders.",
         "cancel_url": "/panel/tags/",
+    })
+
+
+# ── Custom / bulk client emails ─────────────────────────────────────────────
+
+@superuser_required
+def custom_email_list(request):
+    """Pick recipients for a custom email — checkbox selection, same pattern as investors."""
+    qs = User.objects.order_by("-date_joined")
+    q  = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(Q(email__icontains=q) | Q(username__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))
+    page = Paginator(qs, 25).get_page(request.GET.get("page"))
+    return render(request, "panel/emails/list.html", {"page_obj": page, "q": q})
+
+
+@superuser_required
+def custom_email_compose(request):
+    """
+    Stage 1 (POST with only user_ids): show the compose form for the selected recipients.
+    Stage 2 (POST with subject/message): validate + send to every selected recipient.
+    """
+    user_ids = request.POST.getlist("user_ids") or request.GET.getlist("user_ids")
+    users    = User.objects.filter(pk__in=user_ids) if user_ids else User.objects.none()
+
+    if not user_ids:
+        messages.error(request, "No recipients selected.")
+        return redirect("panel:custom_email_list")
+
+    form = CustomEmailForm(request.POST if request.method == "POST" and "subject" in request.POST else None)
+    if form.is_valid():
+        cd           = form.cleaned_data
+        social_links = form.social_links()
+
+        campaign = EmailCampaign.objects.create(
+            subject=cd["subject"],
+            heading=cd.get("heading", ""),
+            message=cd["message"],
+            cta_text=cd.get("cta_text", ""),
+            cta_url=cd.get("cta_url", ""),
+            social_links=social_links,
+            recipient_count=users.count(),
+            sent_by=request.user,
+        )
+
+        sent = failed = 0
+        recipient_rows = []
+        for recipient in users:
+            ok = send_custom_email(
+                recipient,
+                subject=cd["subject"],
+                message=cd["message"],
+                heading=cd.get("heading", ""),
+                social_links=social_links,
+                cta_text=cd.get("cta_text", ""),
+                cta_url=cd.get("cta_url", ""),
+            )
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+            recipient_rows.append(EmailCampaignRecipient(
+                campaign=campaign,
+                user=recipient,
+                email=recipient.email,
+                name=f"{recipient.first_name} {recipient.last_name}".strip(),
+                status="sent" if ok else "failed",
+            ))
+        EmailCampaignRecipient.objects.bulk_create(recipient_rows)
+
+        campaign.sent_count   = sent
+        campaign.failed_count = failed
+        campaign.save(update_fields=["sent_count", "failed_count"])
+
+        if failed:
+            messages.warning(request, f"Email sent to {sent} of {users.count()} recipient(s) — {failed} failed. See details below.")
+        else:
+            messages.success(request, f"Email sent to {sent} recipient(s).")
+        return redirect("panel:custom_email_detail", pk=campaign.pk)
+
+    return render(request, "panel/emails/compose.html", {
+        "form": form, "users": users, "user_ids": user_ids,
+    })
+
+
+@superuser_required
+def custom_email_history(request):
+    """Log of previously sent custom email campaigns."""
+    qs   = EmailCampaign.objects.select_related("sent_by").order_by("-created_at")
+    page = Paginator(qs, 25).get_page(request.GET.get("page"))
+    return render(request, "panel/emails/history.html", {"page_obj": page})
+
+
+@superuser_required
+def custom_email_detail(request, pk):
+    """Full details of a sent campaign: content, live HTML preview, and per-recipient status."""
+    campaign        = get_object_or_404(EmailCampaign.objects.select_related("sent_by"), pk=pk)
+    has_recipients  = campaign.recipients.exists()
+    recipients_qs   = campaign.recipients.order_by("email")
+    status_f        = request.GET.get("status", "").strip()
+    if status_f in ("sent", "failed"):
+        recipients_qs = recipients_qs.filter(status=status_f)
+    page = Paginator(recipients_qs, 50).get_page(request.GET.get("page"))
+
+    preview_html = render_custom_email_preview(
+        message=campaign.message,
+        heading=campaign.heading,
+        social_links=campaign.social_links,
+        cta_text=campaign.cta_text,
+        cta_url=campaign.cta_url,
+    )
+
+    return render(request, "panel/emails/detail.html", {
+        "campaign":       campaign,
+        "page_obj":       page,
+        "status_f":       status_f,
+        "preview_html":   preview_html,
+        "has_recipients": has_recipients,
+    })
+
+
+@superuser_required
+def custom_email_delete(request, pk):
+    """Delete a campaign record (and its recipient rows) from Email History.
+    Does not un-send anything — this only removes the log entry."""
+    campaign = get_object_or_404(EmailCampaign, pk=pk)
+    if request.method == "POST":
+        subject = campaign.subject
+        campaign.delete()
+        messages.success(request, f"Deleted email record '{subject}'.")
+        return redirect("panel:custom_email_history")
+    return render(request, "panel/confirm_delete.html", {
+        "title": "Delete this email record?",
+        "subtitle": campaign.subject,
+        "warning": "This only removes the log entry — it does not un-send the email or notify recipients.",
+        "cancel_url": "/panel/emails/history/",
     })

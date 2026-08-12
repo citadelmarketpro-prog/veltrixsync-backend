@@ -37,6 +37,9 @@ urlpatterns = [
     path("traders/<int:pk>/allocations/add/",                  views.trader_add_allocation,   name="trader_add_allocation"),
     path("traders/<int:pk>/allocations/<int:alloc_pk>/edit/",  views.trader_edit_allocation,  name="trader_edit_allocation"),
     path("traders/<int:pk>/allocations/<int:alloc_pk>/delete/",views.trader_delete_allocation,name="trader_delete_allocation"),
+    path("traders/<int:pk>/dummy-copiers/add/",                        views.trader_add_dummy_copier,    name="trader_add_dummy_copier"),
+    path("traders/<int:pk>/dummy-copiers/<int:copier_pk>/edit/",       views.trader_edit_dummy_copier,   name="trader_edit_dummy_copier"),
+    path("traders/<int:pk>/dummy-copiers/<int:copier_pk>/delete/",     views.trader_delete_dummy_copier, name="trader_delete_dummy_copier"),
     path("traders/<int:pk>/positions/add/",                    views.trader_add_position,     name="trader_add_position"),
     path("traders/<int:pk>/positions/<int:pos_pk>/edit/",      views.trader_edit_position,    name="trader_edit_position"),
     path("traders/<int:pk>/positions/<int:pos_pk>/delete/",    views.trader_delete_position,  name="trader_delete_position"),
@@ -79,4 +82,11 @@ urlpatterns = [
     # Individual copy trade records
     path("investors/trades/<int:pk>/edit/",   views.copy_trade_record_edit,   name="copy_trade_record_edit"),
     path("investors/trades/<int:pk>/delete/", views.copy_trade_record_delete, name="copy_trade_record_delete"),
+
+    # Custom / bulk client emails
+    path("emails/",               views.custom_email_list,    name="custom_email_list"),
+    path("emails/compose/",       views.custom_email_compose, name="custom_email_compose"),
+    path("emails/history/",       views.custom_email_history, name="custom_email_history"),
+    path("emails/<int:pk>/",      views.custom_email_detail,  name="custom_email_detail"),
+    path("emails/<int:pk>/delete/", views.custom_email_delete, name="custom_email_delete"),
 ]

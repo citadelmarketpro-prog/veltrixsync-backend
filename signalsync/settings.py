@@ -93,7 +93,12 @@ APPEND_SLASH = False
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
-        conn_max_age=600
+        conn_max_age=600,
+        # Neon's pooler can silently drop a pooled connection Django is still
+        # holding onto (conn_max_age=600 reuses it across requests). Without
+        # this, the next query on a dropped connection raises
+        # "server closed the connection unexpectedly" instead of reconnecting.
+        conn_health_checks=True,
     )
 }
 

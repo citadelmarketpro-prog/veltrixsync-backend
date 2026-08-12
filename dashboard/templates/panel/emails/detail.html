@@ -1,0 +1,131 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ campaign.subject }} — VeltrixSync Admin{% endblock %}
+{% block heading %}Email Details{% endblock %}
+{% block breadcrumb %}<a href="{% url 'panel:custom_email_history' %}" style="color:#B0D45A;">Email History</a> / {{ campaign.subject }}{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:custom_email_list' %}" class="btn btn-primary text-xs">✉ New Email</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid gap-6" style="grid-template-columns: minmax(0,1fr) minmax(0,1fr);">
+
+  <!-- Left: content + recipients -->
+  <div style="min-width:0;">
+
+    <!-- Summary -->
+    <div class="panel-card mb-6 px-5 py-5">
+      <h2 class="text-base font-semibold mb-1" style="color:#f0f0f0;">{{ campaign.subject }}</h2>
+      {% if campaign.heading %}<p class="text-sm mb-3" style="color:#B0D45A;">{{ campaign.heading }}</p>{% endif %}
+      <div class="flex flex-wrap gap-4 mb-4 text-xs" style="color:#8fa896;">
+        <span>Sent by <strong style="color:#f0f0f0;">{{ campaign.sent_by.email|default:"—" }}</strong></span>
+        <span>{{ campaign.created_at|date:"M d, Y H:i" }}</span>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <div class="px-3 py-2 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Recipients</p>
+          <p class="text-lg font-bold" style="color:#f0f0f0;">{{ campaign.recipient_count }}</p>
+        </div>
+        <div class="px-3 py-2 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Sent</p>
+          <p class="text-lg font-bold" style="color:#22c55e;">{{ campaign.sent_count }}</p>
+        </div>
+        <div class="px-3 py-2 rounded-lg" style="background:#0d2016; border:1px solid #1e3827;">
+          <p class="text-xs" style="color:#8fa896;">Failed</p>
+          <p class="text-lg font-bold" style="color:{% if campaign.failed_count %}#f87171{% else %}#4a6655{% endif %};">{{ campaign.failed_count }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message body -->
+    <div class="panel-card mb-6 px-5 py-5">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Message Body</p>
+      <div class="text-sm" style="color:#e4ede4; white-space:pre-wrap; line-height:1.7;">{{ campaign.message }}</div>
+
+      {% if campaign.cta_text and campaign.cta_url %}
+      <div class="mt-4 pt-4" style="border-top:1px solid #1e3827;">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Button</p>
+        <p class="text-sm" style="color:#f0f0f0;">{{ campaign.cta_text }} <span style="color:#8fa896;">→</span> <a href="{{ campaign.cta_url }}" target="_blank" style="color:#B0D45A;">{{ campaign.cta_url }}</a></p>
+      </div>
+      {% endif %}
+
+      {% if campaign.social_links %}
+      <div class="mt-4 pt-4" style="border-top:1px solid #1e3827;">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#8fa896;">Social Links Shown</p>
+        <div class="flex flex-wrap gap-2">
+          {% for platform, url in campaign.social_links.items %}
+          <a href="{{ url }}" target="_blank" class="text-xs px-2.5 py-1 rounded-full hover:underline" style="background:#1e3827; color:#B0D45A; text-transform:capitalize;">{{ platform }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recipients -->
+    <div class="panel-card">
+      <div class="card-header">
+        <h3>Recipients</h3>
+        <div class="flex gap-2">
+          <a href="?" class="btn btn-ghost {% if not status_f %}btn-primary{% endif %}" style="padding:4px 10px; font-size:11px;">All</a>
+          <a href="?status=sent" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Sent</a>
+          <a href="?status=failed" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Failed</a>
+        </div>
+      </div>
+      {% if page_obj.object_list %}
+      <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Email</th><th>Name</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for r in page_obj %}
+        <tr>
+          <td>
+            {% if r.user_id %}<a href="{% url 'panel:user_detail' r.user_id %}" style="color:#B0D45A;">{{ r.email }}</a>{% else %}{{ r.email }}{% endif %}
+          </td>
+          <td style="color:#f0f0f0;">{{ r.name|default:"—" }}</td>
+          <td>
+            {% if r.status == "sent" %}<span class="badge badge-green">Sent</span>
+            {% else %}<span class="badge badge-red">Failed</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% if page_obj.has_other_pages %}
+      <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+        <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+        <div class="flex gap-2">
+          {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&status={{ status_f }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+          {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&status={{ status_f }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% elif has_recipients %}
+      <div class="empty-state"><p class="text-sm">No recipients with status "{{ status_f }}".</p></div>
+      {% else %}
+      <div class="empty-state">
+        <p class="text-sm">Recipient details weren't recorded for this campaign.</p>
+        <p class="text-xs mt-1" style="color:#5a7060;">This email was sent before per-recipient tracking was added — only the aggregate counts above are available.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right: live preview -->
+  <div style="min-width:0;">
+    <div class="panel-card" style="position:sticky; top:84px;">
+      <div class="card-header"><h3>Email Preview</h3></div>
+      <div style="padding:16px;">
+        <iframe srcdoc="{{ preview_html }}" title="Email preview"
+                style="width:100%; height:720px; border:1px solid #1e3827; border-radius:8px; background:#ffffff;"
+                sandbox=""></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 1023px) {
+    div[style*="grid-template-columns: minmax(0,1fr) minmax(0,1fr)"] { grid-template-columns: 1fr !important; }
+  }
+</style>
+{% endblock %}

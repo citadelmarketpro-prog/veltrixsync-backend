@@ -1,0 +1,166 @@
+{% extends "panel/base.html" %}
+{% block title %}Send Email — VeltrixSync Admin{% endblock %}
+{% block heading %}Send Email{% endblock %}
+{% block breadcrumb %}Select recipients for a custom email{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:custom_email_history' %}" class="btn btn-ghost text-xs">History</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-6">
+  <form method="get" class="flex flex-wrap gap-3">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search email, name, username…" class="form-control" style="max-width:280px;" />
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if q %}<a href="{% url 'panel:custom_email_list' %}" class="btn btn-ghost">Clear</a>{% endif %}
+  </form>
+</div>
+
+<!-- Bulk action bar (hidden until checkbox selected) -->
+<div id="bulk-bar" class="hidden mb-4 flex items-center gap-3 px-4 py-3 rounded-lg" style="background:#1a2e1e; border:1px solid #1e3827;">
+  <span id="bulk-count" class="text-sm font-semibold" style="color:#B0D45A;">0 selected</span>
+  <button type="button" onclick="submitBulk()" class="btn btn-primary" style="padding:6px 16px; font-size:12px;">✉ Compose Email to Selected</button>
+  <button type="button" onclick="clearAll()" class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Clear</button>
+</div>
+
+<form id="bulk-form" method="post" action="{% url 'panel:custom_email_compose' %}">
+  {% csrf_token %}
+  <div id="hidden-user-ids"></div>
+</form>
+
+<div class="panel-card">
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width:40px;">
+          <input type="checkbox" id="select-all" onchange="toggleAll(this)" />
+        </th>
+        <th>Email</th>
+        <th>Name</th>
+        <th>KYC Status</th>
+        <th>Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in page_obj %}
+    <tr>
+      <td>
+        <input type="checkbox" class="user-check" value="{{ u.pk }}" onchange="onCheckChange(this)" />
+      </td>
+      <td>
+        <a href="{% url 'panel:user_detail' u.pk %}" class="font-medium hover:underline" style="color:#B0D45A;">{{ u.email }}</a>
+        {% if not u.is_active %}<span class="badge badge-red ml-1">Inactive</span>{% endif %}
+      </td>
+      <td style="color:#f0f0f0;">
+        {% if u.first_name or u.last_name %}{{ u.first_name }} {{ u.last_name }}{% else %}<span style="color:#4a6655;">—</span>{% endif %}
+      </td>
+      <td>
+        {% if u.kyc_status == "approved"      %}<span class="badge badge-green">Approved</span>
+        {% elif u.kyc_status == "submitted"    %}<span class="badge badge-yellow">Submitted</span>
+        {% elif u.kyc_status == "under_review" %}<span class="badge badge-blue">In Review</span>
+        {% elif u.kyc_status == "rejected"     %}<span class="badge badge-red">Rejected</span>
+        {% else %}<span class="badge badge-gray">Not submitted</span>{% endif %}
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ u.date_joined|date:"M d, Y" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <p>No users found.</p>
+  </div>
+  {% endif %}
+</div>
+
+<p class="text-xs mt-3" style="color:#8fa896;">Selections are kept as you page or search through results &mdash; tick users across as many pages as you like, then compose when ready.</p>
+
+<script>
+// ── Client-side selection, persisted across pagination/search (sessionStorage) ──
+const SELECTION_KEY = 'panel_custom_email_selected_ids';
+
+function getSelected() {
+  try { return new Set(JSON.parse(sessionStorage.getItem(SELECTION_KEY) || '[]')); }
+  catch (e) { return new Set(); }
+}
+function saveSelected(set) {
+  sessionStorage.setItem(SELECTION_KEY, JSON.stringify([...set]));
+}
+
+function initSelection() {
+  const selected = getSelected();
+  document.querySelectorAll('.user-check').forEach(cb => { cb.checked = selected.has(cb.value); });
+  syncSelectAll();
+  updateBulk();
+}
+
+function syncSelectAll() {
+  const boxes = [...document.querySelectorAll('.user-check')];
+  const selectAll = document.getElementById('select-all');
+  selectAll.checked = boxes.length > 0 && boxes.every(c => c.checked);
+}
+
+function onCheckChange(cb) {
+  const selected = getSelected();
+  if (cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+  saveSelected(selected);
+  syncSelectAll();
+  updateBulk();
+}
+
+function updateBulk() {
+  const count = getSelected().size;
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = count + ' selected';
+  bar.classList.toggle('hidden', count === 0);
+}
+
+function toggleAll(el) {
+  const selected = getSelected();
+  document.querySelectorAll('.user-check').forEach(c => {
+    c.checked = el.checked;
+    if (el.checked) selected.add(c.value); else selected.delete(c.value);
+  });
+  saveSelected(selected);
+  updateBulk();
+}
+
+function clearAll() {
+  sessionStorage.removeItem(SELECTION_KEY);
+  document.querySelectorAll('.user-check').forEach(c => { c.checked = false; });
+  document.getElementById('select-all').checked = false;
+  updateBulk();
+}
+
+function submitBulk() {
+  const ids = [...getSelected()];
+  const container = document.getElementById('hidden-user-ids');
+  container.innerHTML = '';
+  ids.forEach(id => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'user_ids';
+    inp.value = id;
+    container.appendChild(inp);
+  });
+  sessionStorage.removeItem(SELECTION_KEY); // hand-off to compose page; start fresh next time
+  document.getElementById('bulk-form').submit();
+}
+
+document.addEventListener('DOMContentLoaded', initSelection);
+</script>
+{% endblock %}

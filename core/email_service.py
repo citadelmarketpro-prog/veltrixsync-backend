@@ -7,6 +7,7 @@ import random
 import resend
 from django.conf import settings
 from django.utils import timezone
+from django.utils.html import escape, linebreaks
 from datetime import timedelta
 import logging
 
@@ -329,15 +330,66 @@ def _header_html() -> str:
     """
 
 
-def _footer_html(user_email: str) -> str:
-    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    year     = timezone.now().year
+# Platform key -> (glyph shown in the badge, brand color). Order controls display order.
+_SOCIAL_META = {
+    "facebook":  ("f",  "#1877F2"),
+    "twitter":   ("X",  "#000000"),
+    "instagram": ("IG", "#E1306C"),
+    "linkedin":  ("in", "#0A66C2"),
+    "telegram":  ("TG", "#26A5E4"),
+    "youtube":   ("YT", "#FF0000"),
+}
+_SOCIAL_LABELS = {
+    "facebook": "Facebook", "twitter": "Twitter / X", "instagram": "Instagram",
+    "linkedin": "LinkedIn", "telegram": "Telegram", "youtube": "YouTube",
+}
+
+
+def _social_icons_html(social_links: dict | None) -> str:
+    """
+    Row of circular social icon badges for the footer. A platform is only
+    rendered if `social_links` has a non-empty URL for it — e.g. passing
+    {"facebook": "https://facebook.com/x"} renders just the Facebook icon.
+    Returns "" (no row at all) when no links are provided.
+    """
+    if not social_links:
+        return ""
+
+    cells = []
+    for key, (glyph, color) in _SOCIAL_META.items():
+        url = (social_links.get(key) or "").strip()
+        if not url:
+            continue
+        label = _SOCIAL_LABELS[key]
+        cells.append(f"""
+            <td style="padding:0 5px;">
+                <a href="{escape(url)}" title="{label}" style="display:inline-block; width:32px; height:32px;
+                   line-height:32px; background-color:{color}; border-radius:50%; text-align:center;
+                   text-decoration:none; color:#ffffff; font-size:12px; font-weight:700;
+                   font-family:Arial,Helvetica,sans-serif;">{glyph}</a>
+            </td>""")
+
+    if not cells:
+        return ""
+
+    return f"""
+    <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:18px auto 4px;">
+        <tr>{''.join(cells)}</tr>
+    </table>
+    """
+
+
+def _footer_html(user_email: str, social_links: dict | None = None) -> str:
+    frontend    = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+    year        = timezone.now().year
+    social_html = _social_icons_html(social_links)
     return f"""
     <div class="footer">
         <div class="footer-brand">VeltrixSync</div>
         <div class="footer-text">
             This is an automated message. Please do not reply directly to this email.
         </div>
+        {social_html}
         <div class="footer-links">
             <a href="{frontend}/privacy">Privacy Policy</a>
             <a href="{frontend}/terms">Terms of Service</a>
@@ -871,3 +923,86 @@ def send_user_deposit_approved_email(user, transaction) -> bool:
     {_footer_html(user.email)}
     """
     return send_email(user.email, "Deposit Approved — Funds Credited to Your Account", _wrap(body))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin: custom / bulk client email
+# ─────────────────────────────────────────────────────────────────────────────
+# Composed from the admin panel (dashboard app) and sent to one or many users
+# at once. Reuses the exact same header/footer/button styling as every other
+# email above — only the heading, message body, optional CTA button, and
+# footer social icons change per campaign.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_custom_email_html(
+    name: str,
+    email: str,
+    message: str,
+    heading: str = "",
+    social_links: dict | None = None,
+    cta_text: str = "",
+    cta_url: str = "",
+) -> str:
+    """
+    Build the full HTML document for a custom email, shared by `send_custom_email`
+    (real send) and `render_custom_email_preview` (admin preview, not sent).
+
+    - `message` is plain text; blank lines start a new paragraph, single
+      newlines become <br>. It is HTML-escaped, so admins can't break markup.
+    - `heading` is optional — omitted entirely if blank.
+    - `social_links` is an optional dict like {"facebook": "https://...", ...}.
+      Only platforms with a non-empty URL get an icon; if none are set (or
+      the dict is empty/None), no social row is rendered at all.
+    - `cta_text` + `cta_url` are optional — both must be set to show a button.
+    """
+    message_html = linebreaks(message.strip(), autoescape=True)
+
+    cta_block = ""
+    if cta_text and cta_url:
+        cta_block = f"""
+        <div style="text-align:center; margin:32px 0;">
+            <a href="{escape(cta_url)}" class="btn">{escape(cta_text)}</a>
+        </div>"""
+
+    heading_block = f'<div class="heading">{escape(heading)}</div>' if heading else ""
+
+    body = f"""
+    {_header_html()}
+    <div class="body-content">
+        <div class="greeting">Hello {name},</div>
+        {heading_block}
+        <div class="text">{message_html}</div>
+        {cta_block}
+    </div>
+    {_footer_html(email, social_links)}
+    """
+    return _wrap(body)
+
+
+def send_custom_email(
+    user,
+    subject: str,
+    message: str,
+    heading: str = "",
+    social_links: dict | None = None,
+    cta_text: str = "",
+    cta_url: str = "",
+) -> bool:
+    """Send an admin-composed email to a single user using the VeltrixSync template."""
+    name = user.first_name or user.username or "Trader"
+    html = _build_custom_email_html(name, user.email, message, heading, social_links, cta_text, cta_url)
+    return send_email(user.email, subject, html)
+
+
+def render_custom_email_preview(
+    message: str,
+    heading: str = "",
+    social_links: dict | None = None,
+    cta_text: str = "",
+    cta_url: str = "",
+    preview_name: str = "Trader",
+    preview_email: str = "client@example.com",
+) -> str:
+    """Render the exact HTML a recipient would receive, without sending — used for
+    the admin panel's campaign detail/preview page."""
+    return _build_custom_email_html(preview_name, preview_email, message, heading, social_links, cta_text, cta_url)

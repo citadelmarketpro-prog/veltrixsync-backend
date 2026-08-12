@@ -771,13 +771,16 @@ class TraderHistoryListView(APIView):
 
 
 class TraderCopierListView(APIView):
-    """GET /api/traders/<pk>/copiers/"""
+    """GET /api/traders/<pk>/copiers/ — real copiers first, then demo copiers,
+    both shown together as one "Copiers" list."""
     authentication_classes = [CookieJWTAuthentication]
     permission_classes     = [IsAuthenticated]
 
     def get(self, request, pk):
-        copiers = DummyCopier.objects.filter(trader_id=pk)
-        return Response(DummyCopierSerializer(copiers, many=True).data)
+        real = CopyRelationship.objects.filter(trader_id=pk, status="active").select_related("copier")
+        demo = DummyCopier.objects.filter(trader_id=pk)
+        data = CopyRelationshipSerializer(real, many=True).data + DummyCopierSerializer(demo, many=True).data
+        return Response(data)
 
 
 class TraderSimilarListView(APIView):

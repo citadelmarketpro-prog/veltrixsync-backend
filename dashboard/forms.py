@@ -7,6 +7,7 @@ from core.models import (
     AdminWallet,
     CopyRelationship,
     CopyTrade,
+    DummyCopier,
     PortfolioAllocation,
     Trader,
     TraderAsset,
@@ -169,6 +170,35 @@ class PortfolioAllocationForm(forms.ModelForm):
     class Meta:
         model  = PortfolioAllocation
         fields = ["label", "pct", "color", "order"]
+        widgets = {
+            "color": forms.TextInput(attrs={"type": "color", "style": "height:42px; padding:4px;"}),
+        }
+
+
+# Inline formset — lets the trader edit page manage all Portfolio Allocation
+# rows (add/edit/delete) in one submit, alongside the main trader fields.
+PortfolioAllocationFormSet = forms.inlineformset_factory(
+    Trader, PortfolioAllocation,
+    form=PortfolioAllocationForm,
+    fields=["label", "pct", "color", "order"],
+    extra=2, can_delete=True,
+)
+
+
+class DummyCopierForm(forms.ModelForm):
+    """Display-only 'Copiers' row shown on the public trader page — a free-text
+    name, not linked to any real user account."""
+
+    class Meta:
+        model  = DummyCopier
+        fields = ["name", "started_at", "allocated_amount", "pl"]
+        widgets = {
+            "started_at": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["started_at"].input_formats = ["%Y-%m-%dT%H:%M"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -187,6 +217,74 @@ class RejectTransactionForm(forms.Form):
         label="Rejection note",
         widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Optional note…"}),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Custom / bulk client email
+# ─────────────────────────────────────────────────────────────────────────────
+
+class CustomEmailForm(forms.Form):
+    """Compose form for admin-sent custom/bulk client emails (dashboard.EmailCampaign)."""
+
+    subject  = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={"placeholder": "Email subject line"}),
+    )
+    heading  = forms.CharField(
+        max_length=255, required=False,
+        widget=forms.TextInput(attrs={"placeholder": "e.g. Important account update (optional)"}),
+        help_text="Large headline shown under the greeting. Leave blank to omit.",
+    )
+    message  = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 10, "placeholder": "Write the email body here…"}),
+        help_text="Plain text — blank lines start a new paragraph.",
+    )
+    cta_text = forms.CharField(
+        max_length=100, required=False,
+        widget=forms.TextInput(attrs={"placeholder": "e.g. View Dashboard (optional)"}),
+        label="Button text",
+    )
+    cta_url  = forms.URLField(
+        required=False,
+        widget=forms.URLInput(attrs={"placeholder": "https://… (optional)"}),
+        label="Button link",
+    )
+
+    # Social links — each optional. An icon only appears in the email footer
+    # if its URL is filled in here.
+    facebook_url  = forms.URLField(required=False, label="Facebook",
+                                    widget=forms.URLInput(attrs={"placeholder": "https://facebook.com/…"}))
+    twitter_url   = forms.URLField(required=False, label="Twitter / X",
+                                    widget=forms.URLInput(attrs={"placeholder": "https://x.com/…"}))
+    instagram_url = forms.URLField(required=False, label="Instagram",
+                                    widget=forms.URLInput(attrs={"placeholder": "https://instagram.com/…"}))
+    linkedin_url  = forms.URLField(required=False, label="LinkedIn",
+                                    widget=forms.URLInput(attrs={"placeholder": "https://linkedin.com/…"}))
+    telegram_url  = forms.URLField(required=False, label="Telegram",
+                                    widget=forms.URLInput(attrs={"placeholder": "https://t.me/…"}))
+    youtube_url   = forms.URLField(required=False, label="YouTube",
+                                    widget=forms.URLInput(attrs={"placeholder": "https://youtube.com/…"}))
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("cta_text") and not cleaned.get("cta_url"):
+            self.add_error("cta_url", "Add a link, or clear the button text.")
+        if cleaned.get("cta_url") and not cleaned.get("cta_text"):
+            self.add_error("cta_text", "Add button text, or clear the link.")
+        return cleaned
+
+    def social_links(self) -> dict:
+        """Non-empty {platform: url} pairs, ready for email_service.send_custom_email."""
+        cd = self.cleaned_data
+        links = {
+            "facebook":  cd.get("facebook_url", ""),
+            "twitter":   cd.get("twitter_url", ""),
+            "instagram": cd.get("instagram_url", ""),
+            "linkedin":  cd.get("linkedin_url", ""),
+            "telegram":  cd.get("telegram_url", ""),
+            "youtube":   cd.get("youtube_url", ""),
+        }
+        return {k: v for k, v in links.items() if v}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

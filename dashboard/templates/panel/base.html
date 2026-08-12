@@ -243,6 +243,22 @@
       </svg>
       Wallets
     </a>
+
+    <div style="padding:14px 16px 4px; font-size:10px; font-weight:700; color:#4a6655; text-transform:uppercase; letter-spacing:.1em;">Communication</div>
+
+    <a href="{% url 'panel:custom_email_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'custom_email_list' or request.resolver_match.url_name == 'custom_email_compose' %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/>
+      </svg>
+      Send Email
+    </a>
+
+    <a href="{% url 'panel:custom_email_history' %}" class="sidebar-link {% if request.resolver_match.url_name == 'custom_email_history' %}active{% endif %}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>
+      </svg>
+      Email History
+    </a>
   </nav>
 
   <!-- Bottom user -->

@@ -1,0 +1,61 @@
+{% extends "panel/base.html" %}
+{% block title %}Email History — VeltrixSync Admin{% endblock %}
+{% block heading %}Email History{% endblock %}
+{% block breadcrumb %}Previously sent custom email campaigns{% endblock %}
+{% block header_actions %}
+  <a href="{% url 'panel:custom_email_list' %}" class="btn btn-primary text-xs">✉ New Email</a>
+{% endblock %}
+
+{% block content %}
+<div class="panel-card">
+  {% if page_obj.object_list %}
+  <div class="table-wrapper">
+  <table class="data-table">
+    <thead><tr>
+      <th>Subject</th><th>Recipients</th><th>Sent</th><th>Failed</th><th>Sent By</th><th>Date</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for c in page_obj %}
+    <tr>
+      <td style="color:#f0f0f0; font-weight:500;">
+        <a href="{% url 'panel:custom_email_detail' c.pk %}" class="hover:underline" style="color:#f0f0f0;">{{ c.subject }}</a>
+        {% if c.heading %}<p class="text-xs mt-0.5" style="color:#8fa896;">{{ c.heading }}</p>{% endif %}
+      </td>
+      <td style="color:#f0f0f0;">{{ c.recipient_count }}</td>
+      <td><span class="badge badge-green">{{ c.sent_count }}</span></td>
+      <td>
+        {% if c.failed_count > 0 %}<span class="badge badge-red">{{ c.failed_count }}</span>
+        {% else %}<span style="color:#4a6655;">—</span>{% endif %}
+      </td>
+      <td style="color:#8fa896; font-size:12px;">{{ c.sent_by.email|default:"—" }}</td>
+      <td style="color:#8fa896; font-size:12px;">{{ c.created_at|date:"M d, Y H:i" }}</td>
+      <td>
+        <div class="flex gap-2">
+          <a href="{% url 'panel:custom_email_detail' c.pk %}" class="btn btn-ghost" style="padding:5px 10px; font-size:11px;">View Details</a>
+          <a href="{% url 'panel:custom_email_delete' c.pk %}" class="btn btn-danger" style="padding:5px 10px; font-size:11px;">Delete</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:#1e3827;">
+    <p class="text-xs" style="color:#8fa896;">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</p>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Prev</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="btn btn-ghost" style="padding:5px 12px; font-size:12px;">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px; color:#1e3827;"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>
+    <p class="text-sm">No emails sent yet</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

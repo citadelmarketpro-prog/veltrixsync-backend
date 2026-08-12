@@ -86,15 +86,19 @@
   <!-- Right -->
   <div class="lg:col-span-2 space-y-6">
 
-    <!-- Copiers -->
+    <!-- Copiers (real CopyRelationship rows first, then admin-added filler rows) -->
     <div class="panel-card">
       <div class="card-header">
-        <h3>Copiers ({{ copiers|length }})</h3>
+        <h3>Copiers ({{ total_copiers_count }})</h3>
+        <a href="{% url 'panel:trader_add_dummy_copier' obj.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">+ Add</a>
       </div>
-      {% if copiers %}
+      <p class="text-xs px-4 pt-3" style="color:#8fa896;">
+        Shown on the public trader page's "Copiers" tab — real users first, then any filler rows you add here.
+      </p>
+      {% if copiers or dummy_copiers %}
       <div class="table-wrapper">
       <table class="data-table">
-        <thead><tr><th>User</th><th>Allocated</th><th>P&amp;L</th><th>Since</th><th>Action</th></tr></thead>
+        <thead><tr><th>User / Name</th><th>Allocated</th><th>P&amp;L</th><th>Since</th><th>Actions</th></tr></thead>
         <tbody>
         {% for c in copiers %}
         <tr>
@@ -109,11 +113,27 @@
           </td>
         </tr>
         {% endfor %}
+        {% for c in dummy_copiers %}
+        <tr>
+          <td style="color:#f0f0f0;">{{ c.name }}</td>
+          <td style="color:#f0f0f0; font-weight:600;">${{ c.allocated_amount|floatformat:2|intcomma }}</td>
+          <td style="color:{% if c.pl >= 0 %}#22c55e{% else %}#f87171{% endif %}; font-weight:600;">{% if c.pl >= 0 %}+{% endif %}${{ c.pl|floatformat:2|intcomma }}</td>
+          <td style="color:#8fa896; font-size:12px;">{{ c.started_at|date:"M d, Y" }}</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'panel:trader_edit_dummy_copier' obj.pk c.pk %}" class="btn btn-ghost" style="padding:3px 8px; font-size:11px;">Edit</a>
+              <form method="post" action="{% url 'panel:trader_delete_dummy_copier' obj.pk c.pk %}">
+                {% csrf_token %}<button type="submit" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="return confirm('Delete this copier?')">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
         </tbody>
       </table>
       </div>
       {% else %}
-      <div class="empty-state"><p>No copiers yet</p></div>
+      <div class="empty-state"><p>No copiers yet. <a href="{% url 'panel:trader_add_dummy_copier' obj.pk %}" style="color:#B0D45A;">Add one</a></p></div>
       {% endif %}
     </div>
 
