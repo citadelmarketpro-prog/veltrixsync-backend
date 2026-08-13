@@ -439,16 +439,19 @@ class TraderDetailSerializer(TraderSerializer):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TransactionSerializer(serializers.ModelSerializer):
-    tx_type    = serializers.CharField(source="get_tx_type_display")   # "Deposit" / "Withdrawal"
-    status     = serializers.CharField(source="get_status_display")    # "Pending" / "Completed" / "Rejected"
-    date       = serializers.DateTimeField(source="created_at")        # ISO-8601, frontend formats
-    units      = serializers.SerializerMethodField()
-    amount_usd = serializers.SerializerMethodField()
-    tx_id      = serializers.UUIDField()
+    tx_type            = serializers.CharField(source="get_tx_type_display")   # "Deposit" / "Withdrawal"
+    status             = serializers.CharField(source="get_status_display")    # "Pending" / "Completed" / "Rejected"
+    date               = serializers.DateTimeField(source="created_at")        # ISO-8601, frontend formats
+    units              = serializers.SerializerMethodField()
+    amount_usd         = serializers.SerializerMethodField()
+    tx_id              = serializers.UUIDField()
+    withdraw_from      = serializers.CharField()                        # "" | "balance" | "roi"
+    withdraw_from_label = serializers.CharField()                       # "" | "Available Balance" | "Profit (ROI)"
 
     class Meta:
         model  = Transaction
-        fields = ["id", "date", "tx_type", "asset", "units", "amount_usd", "status", "tx_id"]
+        fields = ["id", "date", "tx_type", "asset", "units", "amount_usd", "status", "tx_id",
+                  "withdraw_from", "withdraw_from_label"]
 
     def get_units(self, obj):
         return f"{obj.units:.8f}"

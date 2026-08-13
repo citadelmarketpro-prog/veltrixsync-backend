@@ -26,7 +26,7 @@
   <div class="table-wrapper">
   <table class="data-table">
     <thead><tr>
-      <th>Date</th><th>User</th><th>Type</th><th>Asset</th><th>Amount</th><th>Status</th><th>Actions</th>
+      <th>Date</th><th>User</th><th>Type</th><th>Source</th><th>Asset</th><th>Amount</th><th>Status</th><th>Actions</th>
     </tr></thead>
     <tbody>
     {% for tx in page_obj %}
@@ -36,6 +36,11 @@
       <td>
         {% if tx.tx_type == "deposit" %}<span class="badge badge-green">Deposit</span>
         {% else %}<span class="badge badge-red">Withdrawal</span>{% endif %}
+      </td>
+      <td>
+        {% if tx.withdraw_from_label %}
+          <span class="badge {% if tx.withdraw_from == 'roi' %}badge-blue{% else %}badge-green{% endif %}" style="font-size:10px;">{{ tx.withdraw_from_label }}</span>
+        {% else %}<span style="color:#4a6655;">—</span>{% endif %}
       </td>
       <td style="color:#f0f0f0; font-weight:500;">{{ tx.asset }}</td>
       <td style="color:#f0f0f0; font-weight:700;">${{ tx.amount_usd|floatformat:2|intcomma }}</td>

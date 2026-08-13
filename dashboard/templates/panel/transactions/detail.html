@@ -44,6 +44,16 @@
         <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">TX ID</p>
         <p class="font-mono text-xs break-all" style="color:#8fa896;">{{ obj.tx_id }}</p>
       </div>
+      {% if obj.tx_type == "withdrawal" %}
+      <div>
+        <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">Withdrawal Source</p>
+        {% if obj.withdraw_from_label %}
+          <span class="badge {% if obj.withdraw_from == 'roi' %}badge-blue{% else %}badge-green{% endif %}">{{ obj.withdraw_from_label }}</span>
+        {% else %}
+          <p class="text-xs" style="color:#8fa896;">Not recorded (legacy transaction)</p>
+        {% endif %}
+      </div>
+      {% endif %}
       {% if obj.wallet_address %}
       <div class="col-span-2">
         <p class="text-xs uppercase tracking-widest mb-1" style="color:#8fa896;">Wallet Address</p>
@@ -61,7 +71,7 @@
           {% csrf_token %}
           <button type="submit" class="btn btn-success">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-            Approve {% if obj.tx_type == "deposit" %}— Add ${{ obj.amount_usd|floatformat:2|intcomma }} to balance{% else %}— Deduct ${{ obj.amount_usd|floatformat:2|intcomma }} from balance{% endif %}
+            Approve {% if obj.tx_type == "deposit" %}— Add ${{ obj.amount_usd|floatformat:2|intcomma }} to balance{% else %}— Deduct ${{ obj.amount_usd|floatformat:2|intcomma }} from {{ obj.withdraw_from_label|default:"balance" }}{% endif %}
           </button>
         </form>
         <form method="post" action="{% url 'panel:transaction_reject' obj.pk %}">
@@ -78,7 +88,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
       <p class="text-sm font-medium" style="color:#22c55e;">
         {% if obj.tx_type == "deposit" %}${{ obj.amount_usd|floatformat:2|intcomma }} was added to {{ obj.user.email }}'s balance.
-        {% else %}${{ obj.amount_usd|floatformat:2|intcomma }} was deducted from {{ obj.user.email }}'s balance.{% endif %}
+        {% else %}${{ obj.amount_usd|floatformat:2|intcomma }} was deducted from {{ obj.user.email }}'s {{ obj.withdraw_from_label|default:"balance" }}.{% endif %}
       </p>
     </div>
     {% else %}

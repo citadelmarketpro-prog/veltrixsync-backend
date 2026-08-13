@@ -410,6 +410,15 @@ class Transaction(models.Model):
     def __str__(self):
         return f"{self.user.email} — {self.tx_type} {self.asset} ({self.status})"
 
+    @property
+    def withdraw_from_label(self) -> str:
+        """Human-readable withdrawal source — empty for deposits, or for
+        withdrawals predating this field (those defaulted to "balance" when
+        approved, but we don't retroactively claim a source wasn't recorded)."""
+        if self.tx_type != "withdrawal" or not self.withdraw_from:
+            return ""
+        return "Profit (ROI)" if self.withdraw_from == "roi" else "Available Balance"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AdminWallet — deposit addresses managed by the admin

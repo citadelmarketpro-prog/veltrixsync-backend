@@ -516,11 +516,20 @@ def transaction_approve(request, pk):
         send_user_deposit_approved_email(user, tx)
         messages.success(request, f"Deposit approved — ${tx.amount_usd:,.2f} added to {user.email}.")
     else:
-        user.balance = max(Decimal("0"), user.balance - tx.amount_usd)
-        user.save(update_fields=["balance"])
+        # Deduct from whichever pool the user actually chose at request time —
+        # "roi" (profit) or "balance" (deposited). Older transactions predating
+        # this field are blank, so default to "balance" to match prior behavior.
+        source = tx.withdraw_from or "balance"
+        field  = "roi" if source == "roi" else "balance"
+        source_label = "Profit (ROI)" if field == "roi" else "Available Balance"
+
+        current = getattr(user, field)
+        setattr(user, field, max(Decimal("0"), current - tx.amount_usd))
+        user.save(update_fields=[field])
+
         Notification.objects.create(user=user, notif_type="wallet", title="Withdrawal Approved",
-            body=f"Your withdrawal of ${tx.amount_usd:,.2f} ({tx.asset}) has been approved and processed.")
-        messages.success(request, f"Withdrawal approved — ${tx.amount_usd:,.2f} deducted from {user.email}.")
+            body=f"Your withdrawal of ${tx.amount_usd:,.2f} ({tx.asset}) from your {source_label} has been approved and processed.")
+        messages.success(request, f"Withdrawal approved — ${tx.amount_usd:,.2f} deducted from {user.email}'s {source_label}.")
     return redirect("panel:transaction_detail", pk=pk)
 
 
