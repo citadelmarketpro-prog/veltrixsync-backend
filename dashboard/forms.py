@@ -177,11 +177,25 @@ class PortfolioAllocationForm(forms.ModelForm):
 
 # Inline formset — lets the trader edit page manage all Portfolio Allocation
 # rows (add/edit/delete) in one submit, alongside the main trader fields.
+#
+# extra=0 is deliberate, not a typo: pct/order both have a non-empty model
+# `default=0`, which Django's ModelForm machinery propagates onto the
+# generated form field as `initial=0`. That makes has_changed() compare the
+# untouched extra row's submitted "" against initial 0 (`0 != ""` -> True),
+# so Django thinks the blank row was edited and fully validates it instead
+# of skipping it — and it then fails on the genuinely-empty required fields
+# (label, pct). With extra>0 this silently failed the WHOLE form (including
+# unrelated fields like min_capital) on every edit, since the view only
+# saves when both form.is_valid() and allocation_fs.is_valid() are True.
+# The template's own "+ Add Allocation Row" button already renders new
+# blank rows client-side (via the <template> + __prefix__ substitution), so
+# extra=0 loses no functionality — it just stops baking pre-broken blank
+# rows into every GET-rendered form.
 PortfolioAllocationFormSet = forms.inlineformset_factory(
     Trader, PortfolioAllocation,
     form=PortfolioAllocationForm,
     fields=["label", "pct", "color", "order"],
-    extra=2, can_delete=True,
+    extra=0, can_delete=True,
 )
 
 
